@@ -15,6 +15,8 @@ Para ativar contas, cartoes, recorrencias e caixinhas, execute em ordem `002_dai
 
 Depois, execute `004_security_hardening.sql` para restringir as funcoes do banco aos papeis corretos.
 
+Execute tambem `005_optional_savings_expense.sql` para escolher se cada aporte em uma caixinha deve ser contado como saida.
+
 Nao coloque a `service_role key` no `.env`: ela e secreta e nunca deve ir para o navegador.
 
 ## Hospedagem gratuita
