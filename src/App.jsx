@@ -95,16 +95,47 @@ function SavingsPanel() {
   return <section className="savings"><div className="savings-head"><div><p className="eyebrow">CAIXINHAS</p><h3>Dinheiro reservado</h3></div><span>{money.format(contributions.reduce((sum, item) => sum + Number(item.amount), 0))}</span></div><div className="savings-grid">{boxes.map((box) => { const saved = contributions.filter((item) => item.box_id === box.id).reduce((sum, item) => sum + Number(item.amount), 0); const progress = box.target_amount ? Math.min((saved / Number(box.target_amount)) * 100, 100) : 0; return <article className="saving-box" key={box.id}><button className="saving-remove" onClick={() => removeBox(box.id)}>x</button><span className="saving-icon">$</span><b>{box.name}</b><strong>{money.format(saved)}</strong>{box.target_amount && <><small>Meta: {money.format(box.target_amount)}</small><i><em style={{ width: `${progress}%` }} /></i></>}<label className="saving-expense-flag"><input type="checkbox" checked={countAsExpense[box.id] !== false} onChange={(event) => setCountAsExpense({ ...countAsExpense, [box.id]: event.target.checked })} />Contar como saida</label><div><input type="text" inputMode="numeric" autoComplete="off" placeholder="0,00" aria-label="Valor do aporte em reais" value={amounts[box.id] || ''} onChange={(event) => setAmounts({ ...amounts, [box.id]: formatAmountInput(event.target.value) })} /><button onClick={() => contribute(box)}>Guardar</button></div></article> })}</div><form className="new-saving" onSubmit={createBox}><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Nome da nova caixinha" /><input type="number" min="0.01" step="0.01" value={target} onChange={(event) => setTarget(event.target.value)} placeholder="Meta (opcional)" /><button>Criar caixinha</button></form></section>
 }
 
-function AdvancedPanel() {
+function AdvancedPanel({ month }) {
   const dialog = useAppDialog()
   const [accounts, setAccounts] = useState([])
   const [recurring, setRecurring] = useState([])
   const [name, setName] = useState('')
   const [kind, setKind] = useState('account')
   const [ready, setReady] = useState(true)
+  const generatingRef = useRef(false)
   const load = async () => { const [accountResult, recurringResult] = await Promise.all([supabase.from('accounts').select('*').order('created_at'), supabase.from('recurring_transactions').select('*').order('created_at', { ascending: false })]); if (accountResult.error || recurringResult.error) { setReady(false); return } setReady(true); setAccounts(accountResult.data || []); setRecurring(recurringResult.data || []) }
   useEffect(() => { load() }, [])
-  useEffect(() => { const run = async () => { const monthKey = getMonthKey(new Date()); const currentMonth = `${monthKey}-01`; const due = recurring.filter((item) => item.active && item.start_date <= currentMonth && (!item.last_generated_month || item.last_generated_month < currentMonth)); if (!due.length) return; let generated = false; for (const item of due) { const { error } = await supabase.from('transactions').insert({ user_id: item.user_id, account_id: item.account_id, type: item.type, description: item.description, amount: item.amount, category: item.category, date: dateInMonth(monthKey, item.day_of_month) }); if (!error) { await supabase.from('recurring_transactions').update({ last_generated_month: currentMonth }).eq('id', item.id); generated = true } } if (generated) window.dispatchEvent(new Event('finance-data-changed')); load() }; run() }, [recurring])
+  useEffect(() => { const refresh = () => load(); window.addEventListener('recurring-data-changed', refresh); return () => window.removeEventListener('recurring-data-changed', refresh) }, [])
+  useEffect(() => {
+    const run = async () => {
+      const targetMonth = `${month}-01`
+      const due = recurring.filter((item) => item.active && item.start_date <= targetMonth && (!item.last_generated_month || item.last_generated_month < targetMonth))
+      if (!due.length || generatingRef.current) return
+      generatingRef.current = true
+      let generated = false
+      try {
+        for (const item of due) {
+          const lastMonth = (item.last_generated_month || `${item.start_date.slice(0, 7)}-01`).slice(0, 7)
+          const rows = []
+          let cursor = changeMonth(lastMonth, 1)
+          while (cursor <= month) {
+            rows.push({ user_id: item.user_id, account_id: item.account_id, type: item.type, description: item.description, amount: item.amount, category: item.category, date: dateInMonth(cursor, item.day_of_month) })
+            cursor = changeMonth(cursor, 1)
+          }
+          if (!rows.length) continue
+          const { error } = await supabase.from('transactions').insert(rows)
+          if (!error) {
+            const { error: updateError } = await supabase.from('recurring_transactions').update({ last_generated_month: targetMonth }).eq('id', item.id)
+            generated = generated || !updateError
+          }
+        }
+        if (generated) { window.dispatchEvent(new Event('finance-data-changed')); await load() }
+      } finally {
+        generatingRef.current = false
+      }
+    }
+    run()
+  }, [recurring, month])
   const add = async (event) => { event.preventDefault(); if (!name.trim()) return; const { data } = await supabase.auth.getUser(); const { error } = await supabase.from('accounts').insert({ name: name.trim(), kind, user_id: data.user.id }); if (!error) { setName(''); load() } }
   const removeAccount = async (id) => { if (!await dialog.confirm('A conta ou cartao sera removido, mas os lancamentos vinculados continuarao no seu historico.', { title: 'Excluir conta ou cartao?' })) return; await supabase.from('accounts').delete().eq('id', id); load() }
   const toggleRecurring = async (item) => { await supabase.from('recurring_transactions').update({ active: !item.active }).eq('id', item.id); load() }
@@ -118,7 +149,7 @@ function BudgetPanel({ month, budgets, expensesByCategory, onSave, ready }) {
   const startEdit = () => { setDraft(Object.fromEntries(budgets.map((budget) => [budget.category, budget.amount]))); setEditing(true) }
   const submit = (event) => { event.preventDefault(); onSave(draft); setEditing(false) }
   if (!ready) return <article className="panel budget-panel"><p className="eyebrow">ORCAMENTOS</p><h2>Planeje seus gastos</h2><p className="empty">Execute a atualizacao de banco em <code>supabase/schema.sql</code> para ativar os orcamentos.</p></article>
-  return <article className="panel budget-panel"><div className="panel-head"><div><p className="eyebrow">ORCAMENTOS</p><h2>Limites de {monthLabel.format(new Date(`${month}-01T12:00:00`))}</h2></div><button className="text-button" onClick={editing ? () => setEditing(false) : startEdit}>{editing ? 'Cancelar' : 'Editar'}</button></div>{editing ? <form className="budget-form" onSubmit={submit}>{categories.map((category) => <label key={category}>{category}<input type="number" min="0" step="0.01" placeholder="Sem limite" value={draft[category] ?? ''} onChange={(event) => setDraft({ ...draft, [category]: event.target.value })} /></label>)}<button>Salvar orcamentos</button></form> : <div className="budget-list">{budgets.map((budget) => { const spent = expensesByCategory[budget.category] || 0; const ratio = Math.min((spent / Number(budget.amount)) * 100, 100); return <div className="budget-row" key={budget.category}><div><span>{budget.category}</span><b>{money.format(spent)} <small>de {money.format(budget.amount)}</small></b></div><i><em style={{ width: `${ratio}%` }} /></i></div> })}</div>}<p className="eyebrow advanced-title">CONTAS, CARTOES E RECORRENTES</p><AdvancedPanel /></article>
+  return <article className="panel budget-panel"><div className="panel-head"><div><p className="eyebrow">ORCAMENTOS</p><h2>Limites de {monthLabel.format(new Date(`${month}-01T12:00:00`))}</h2></div><button className="text-button" onClick={editing ? () => setEditing(false) : startEdit}>{editing ? 'Cancelar' : 'Editar'}</button></div>{editing ? <form className="budget-form" onSubmit={submit}>{categories.map((category) => <label key={category}>{category}<input type="number" min="0" step="0.01" placeholder="Sem limite" value={draft[category] ?? ''} onChange={(event) => setDraft({ ...draft, [category]: event.target.value })} /></label>)}<button>Salvar orcamentos</button></form> : <div className="budget-list">{budgets.map((budget) => { const spent = expensesByCategory[budget.category] || 0; const ratio = Math.min((spent / Number(budget.amount)) * 100, 100); return <div className="budget-row" key={budget.category}><div><span>{budget.category}</span><b>{money.format(spent)} <small>de {money.format(budget.amount)}</small></b></div><i><em style={{ width: `${ratio}%` }} /></i></div> })}</div>}<p className="eyebrow advanced-title">CONTAS, CARTOES E RECORRENTES</p><AdvancedPanel month={month} /></article>
 }
 
 function TransactionModal({ entry, onClose, onSave }) {
@@ -220,6 +251,7 @@ function Dashboard({ session }) {
     if (!result.error && advancedReady && draft.recurring) {
       const recurringResult = await supabase.from('recurring_transactions').insert({ user_id: session.user.id, type: draft.type, description: draft.description, amount: draft.amount, category: draft.category, account_id: draft.account_id || null, day_of_month: Number(draft.date.slice(-2)), start_date: draft.date, last_generated_month: `${draft.date.slice(0, 7)}-01` })
       if (recurringResult.error) await dialog.alert('O lancamento foi salvo, mas nao foi possivel criar a recorrencia.', { title: 'Recorrencia nao criada' })
+      else window.dispatchEvent(new Event('recurring-data-changed'))
     }
     if (!result.error) { setModal(null); load() }
   }
