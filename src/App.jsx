@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { configured, supabase } from './supabase'
 
 const categories = ['Salario', 'Caixinha', 'Moradia', 'Alimentacao', 'Transporte', 'Lazer', 'Saude', 'Educacao', 'Assinaturas', 'Outros']
@@ -17,6 +17,33 @@ function total(items, type) { return items.filter((item) => item.type === type &
 function formatAmountInput(value) { const digits = String(value ?? '').replace(/\D/g, ''); if (!digits) return ''; return (Number(digits) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 function amountToInput(value) { return value === '' || value == null ? '' : formatAmountInput(Math.round(Number(value) * 100)) }
 function inputToAmount(value) { const digits = String(value ?? '').replace(/\D/g, ''); return digits ? Number(digits) / 100 : 0 }
+
+const DialogContext = createContext(null)
+
+function DialogProvider({ children }) {
+  const [dialog, setDialog] = useState(null)
+  const resolverRef = useRef(null)
+  const previousFocusRef = useRef(null)
+  const finish = (result) => { const resolve = resolverRef.current; resolverRef.current = null; setDialog(null); resolve?.(result); requestAnimationFrame(() => previousFocusRef.current?.focus()) }
+  const open = (options) => new Promise((resolve) => { resolverRef.current?.(false); previousFocusRef.current = document.activeElement; resolverRef.current = resolve; setDialog(options) })
+  const confirm = (message, options = {}) => open({ kind: 'confirm', message, title: options.title || 'Confirmar exclusao', confirmLabel: options.confirmLabel || 'Excluir' })
+  const alert = (message, options = {}) => open({ kind: 'alert', message, title: options.title || 'Algo precisa de atencao', confirmLabel: options.confirmLabel || 'Entendi' })
+
+  useEffect(() => {
+    if (!dialog) return
+    const previousOverflow = document.body.style.overflow
+    const onKeyDown = (event) => { if (event.key === 'Escape') { event.preventDefault(); finish(false) } }
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', onKeyDown)
+    return () => { document.body.style.overflow = previousOverflow; window.removeEventListener('keydown', onKeyDown) }
+  }, [dialog])
+
+  return <DialogContext.Provider value={{ confirm, alert }}>{children}{dialog && <div className="app-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) finish(false) }}><section className={`app-dialog ${dialog.kind}`} role={dialog.kind === 'alert' ? 'alertdialog' : 'dialog'} aria-modal="true" aria-labelledby="app-dialog-title" aria-describedby="app-dialog-message"><span className="app-dialog-icon" aria-hidden="true">{dialog.kind === 'confirm' ? '!' : 'i'}</span><p className="eyebrow">SALDO CLARO</p><h2 id="app-dialog-title">{dialog.title}</h2><p id="app-dialog-message">{dialog.message}</p><div className="app-dialog-actions">{dialog.kind === 'confirm' && <button type="button" className="dialog-cancel" onClick={() => finish(false)}>Cancelar</button>}<button type="button" className="dialog-confirm" autoFocus onClick={() => finish(true)}>{dialog.confirmLabel}</button></div></section></div>}</DialogContext.Provider>
+}
+
+function useAppDialog() {
+  return useContext(DialogContext)
+}
 
 function Auth({ onSession }) {
   const [mode, setMode] = useState('login')
@@ -51,6 +78,7 @@ function FlowChart({ entries }) {
 }
 
 function SavingsPanel() {
+  const dialog = useAppDialog()
   const [boxes, setBoxes] = useState([])
   const [contributions, setContributions] = useState([])
   const [name, setName] = useState('')
@@ -61,13 +89,14 @@ function SavingsPanel() {
   const load = async () => { const [boxResult, contributionResult] = await Promise.all([supabase.from('savings_boxes').select('*').order('created_at'), supabase.from('savings_contributions').select('*')]); if (boxResult.error || contributionResult.error) { setReady(false); return } setReady(true); setBoxes(boxResult.data || []); setContributions(contributionResult.data || []) }
   useEffect(() => { load() }, [])
   const createBox = async (event) => { event.preventDefault(); if (!name.trim()) return; const { data } = await supabase.auth.getUser(); const { error } = await supabase.from('savings_boxes').insert({ user_id: data.user.id, name: name.trim(), target_amount: target ? Number(target) : null }); if (!error) { setName(''); setTarget(''); load() } }
-  const contribute = async (box) => { const amount = inputToAmount(amounts[box.id]); if (!(amount > 0)) return; const { error } = await supabase.rpc('add_savings_contribution_v2', { p_box_id: box.id, p_amount: amount, p_date: isoToday, p_count_as_expense: countAsExpense[box.id] !== false }); if (error) return window.alert(error.message); setAmounts({ ...amounts, [box.id]: '' }); await load(); window.dispatchEvent(new Event('finance-data-changed')) }
-  const removeBox = async (id) => { if (!window.confirm('Excluir esta caixinha e o historico de aportes? As saidas financeiras serao mantidas.')) return; await supabase.from('savings_boxes').delete().eq('id', id); load() }
+  const contribute = async (box) => { const amount = inputToAmount(amounts[box.id]); if (!(amount > 0)) return; const { error } = await supabase.rpc('add_savings_contribution_v2', { p_box_id: box.id, p_amount: amount, p_date: isoToday, p_count_as_expense: countAsExpense[box.id] !== false }); if (error) return dialog.alert(error.message, { title: 'Aporte nao realizado' }); setAmounts({ ...amounts, [box.id]: '' }); await load(); window.dispatchEvent(new Event('finance-data-changed')) }
+  const removeBox = async (id) => { if (!await dialog.confirm('A caixinha e todo o historico de aportes serao excluidos. As movimentacoes financeiras existentes serao mantidas.', { title: 'Excluir esta caixinha?' })) return; await supabase.from('savings_boxes').delete().eq('id', id); load() }
   if (!ready) return <section className="savings-disabled"><p className="empty">Execute a migration <code>003_savings_boxes.sql</code> para ativar as caixinhas.</p></section>
   return <section className="savings"><div className="savings-head"><div><p className="eyebrow">CAIXINHAS</p><h3>Dinheiro reservado</h3></div><span>{money.format(contributions.reduce((sum, item) => sum + Number(item.amount), 0))}</span></div><div className="savings-grid">{boxes.map((box) => { const saved = contributions.filter((item) => item.box_id === box.id).reduce((sum, item) => sum + Number(item.amount), 0); const progress = box.target_amount ? Math.min((saved / Number(box.target_amount)) * 100, 100) : 0; return <article className="saving-box" key={box.id}><button className="saving-remove" onClick={() => removeBox(box.id)}>x</button><span className="saving-icon">$</span><b>{box.name}</b><strong>{money.format(saved)}</strong>{box.target_amount && <><small>Meta: {money.format(box.target_amount)}</small><i><em style={{ width: `${progress}%` }} /></i></>}<label className="saving-expense-flag"><input type="checkbox" checked={countAsExpense[box.id] !== false} onChange={(event) => setCountAsExpense({ ...countAsExpense, [box.id]: event.target.checked })} />Contar como saida</label><div><input type="text" inputMode="numeric" autoComplete="off" placeholder="0,00" aria-label="Valor do aporte em reais" value={amounts[box.id] || ''} onChange={(event) => setAmounts({ ...amounts, [box.id]: formatAmountInput(event.target.value) })} /><button onClick={() => contribute(box)}>Guardar</button></div></article> })}</div><form className="new-saving" onSubmit={createBox}><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Nome da nova caixinha" /><input type="number" min="0.01" step="0.01" value={target} onChange={(event) => setTarget(event.target.value)} placeholder="Meta (opcional)" /><button>Criar caixinha</button></form></section>
 }
 
 function AdvancedPanel() {
+  const dialog = useAppDialog()
   const [accounts, setAccounts] = useState([])
   const [recurring, setRecurring] = useState([])
   const [name, setName] = useState('')
@@ -77,7 +106,7 @@ function AdvancedPanel() {
   useEffect(() => { load() }, [])
   useEffect(() => { const run = async () => { const monthKey = getMonthKey(new Date()); const currentMonth = `${monthKey}-01`; const due = recurring.filter((item) => item.active && item.start_date <= currentMonth && (!item.last_generated_month || item.last_generated_month < currentMonth)); if (!due.length) return; let generated = false; for (const item of due) { const { error } = await supabase.from('transactions').insert({ user_id: item.user_id, account_id: item.account_id, type: item.type, description: item.description, amount: item.amount, category: item.category, date: dateInMonth(monthKey, item.day_of_month) }); if (!error) { await supabase.from('recurring_transactions').update({ last_generated_month: currentMonth }).eq('id', item.id); generated = true } } if (generated) window.dispatchEvent(new Event('finance-data-changed')); load() }; run() }, [recurring])
   const add = async (event) => { event.preventDefault(); if (!name.trim()) return; const { data } = await supabase.auth.getUser(); const { error } = await supabase.from('accounts').insert({ name: name.trim(), kind, user_id: data.user.id }); if (!error) { setName(''); load() } }
-  const removeAccount = async (id) => { if (!window.confirm('Excluir esta conta ou cartao? Os lancamentos serao mantidos.')) return; await supabase.from('accounts').delete().eq('id', id); load() }
+  const removeAccount = async (id) => { if (!await dialog.confirm('A conta ou cartao sera removido, mas os lancamentos vinculados continuarao no seu historico.', { title: 'Excluir conta ou cartao?' })) return; await supabase.from('accounts').delete().eq('id', id); load() }
   const toggleRecurring = async (item) => { await supabase.from('recurring_transactions').update({ active: !item.active }).eq('id', item.id); load() }
   if (!ready) return <div className="advanced-block"><p className="empty">Execute a migration <code>002_daily_control.sql</code> para ativar contas, cartoes, parcelas e recorrencias.</p></div>
   return <div className="advanced-block"><div className="account-list">{accounts.map((account) => <div key={account.id}><span className={`account-icon ${account.kind}`}>{account.kind === 'card' ? 'C' : 'B'}</span><b>{account.name}<small>{account.kind === 'card' ? 'Cartao' : 'Conta'}</small></b><button className="delete" onClick={() => removeAccount(account.id)}>x</button></div>)}</div><form className="inline-form" onSubmit={add}><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Nova conta ou cartao" /><select value={kind} onChange={(event) => setKind(event.target.value)}><option value="account">Conta</option><option value="card">Cartao</option></select><button>Adicionar</button></form><div className="recurring-list">{recurring.length ? recurring.map((item) => <div key={item.id}><span>{item.description}<small>Todo dia {item.day_of_month} · {item.category}</small></span><b className={item.type}>{item.type === 'income' ? '+' : '-'} {money.format(item.amount)}</b><button className="text-button" onClick={() => toggleRecurring(item)}>{item.active ? 'Pausar' : 'Retomar'}</button></div>) : <p className="empty">Lancamentos mensais aparecerao aqui.</p>}</div><SavingsPanel /></div>
@@ -93,12 +122,13 @@ function BudgetPanel({ month, budgets, expensesByCategory, onSave, ready }) {
 }
 
 function TransactionModal({ entry, onClose, onSave }) {
+  const dialog = useAppDialog()
   const [draft, setDraft] = useState(entry ? { ...entry, amount: amountToInput(entry.amount), installment: Number(entry.installment_total) > 1, installments: Number(entry.installment_total) > 1 ? entry.installment_total : 1, recurring: false } : emptyEntry)
   const [accounts, setAccounts] = useState([])
   const [advancedReady, setAdvancedReady] = useState(false)
   const editing = Boolean(entry?.id)
   useEffect(() => { supabase.from('accounts').select('*').order('created_at').then(({ data, error }) => { setAdvancedReady(!error); setAccounts(data || []) }) }, [])
-  const submit = (event) => { event.preventDefault(); const amount = inputToAmount(draft.amount); if (!(amount > 0)) return window.alert('Informe um valor maior que zero.'); if (draft.installment_group_id && draft.recurring) return window.alert('Uma parcela existente nao pode ser transformada em recorrencia.'); onSave({ ...draft, amount }) }
+  const submit = (event) => { event.preventDefault(); const amount = inputToAmount(draft.amount); if (!(amount > 0)) return dialog.alert('Informe um valor maior que zero.', { title: 'Valor invalido' }); if (draft.installment_group_id && draft.recurring) return dialog.alert('Uma parcela existente nao pode ser transformada em recorrencia.', { title: 'Recorrencia indisponivel' }); onSave({ ...draft, amount }) }
   return <div className="modal-backdrop"><form className="modal" onSubmit={submit}><button className="close" type="button" onClick={onClose}>x</button><p className="eyebrow">{editing ? 'EDITAR LANCAMENTO' : 'NOVO LANCAMENTO'}</p><h2>{editing ? 'Atualize a movimentacao' : 'Registrar movimentacao'}</h2><div className="type-picker"><button type="button" className={draft.type === 'expense' ? 'active expense-bg' : ''} onClick={() => setDraft({ ...draft, type: 'expense' })}>Saida</button><button type="button" className={draft.type === 'income' ? 'active income-bg' : ''} onClick={() => setDraft({ ...draft, type: 'income', installment: false, installments: 1 })}>Entrada</button></div><label>Descricao<input value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} required placeholder="Ex.: Mercado" /></label><div className="fields"><label>Valor<input type="text" inputMode="numeric" autoComplete="off" value={draft.amount} onChange={(event) => setDraft({ ...draft, amount: formatAmountInput(event.target.value) })} required placeholder="0,00" aria-label="Valor em reais" /></label><label>Data<input type="date" value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} required /></label></div><label>Categoria<select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{categories.map((category) => <option key={category}>{category}</option>)}</select></label>{advancedReady && <><label>Conta ou cartao<select value={draft.account_id || ''} onChange={(event) => setDraft({ ...draft, account_id: event.target.value })}><option value="">Sem conta definida</option>{accounts.map((account) => <option value={account.id} key={account.id}>{account.name} ({account.kind === 'card' ? 'Cartao' : 'Conta'})</option>)}</select></label><div className="financial-options"><label className="check-label"><input type="checkbox" checked={draft.installment} disabled={draft.type !== 'expense' || Boolean(draft.installment_group_id)} onChange={(event) => setDraft({ ...draft, installment: event.target.checked, installments: event.target.checked ? 2 : 1, recurring: false })} /> Compra parcelada</label><label className="check-label"><input type="checkbox" checked={draft.recurring} onChange={(event) => setDraft({ ...draft, recurring: event.target.checked, installment: false, installments: 1 })} /> Repetir mensalmente</label></div>{draft.installment && <label>Quantidade de parcelas<input type="number" min="2" max="48" disabled={Boolean(draft.installment_group_id)} value={draft.installments} onChange={(event) => setDraft({ ...draft, installments: event.target.value })} /></label>}{draft.installment_group_id && <p className="installment-note">Este item pertence a um parcelamento existente. A edicao altera somente esta parcela.</p>}</>}<button>{editing ? 'Salvar alteracoes' : 'Salvar lancamento'}</button></form></div>
 }
 
@@ -124,6 +154,7 @@ function TransactionEntry({ item, onEdit, onRemove }) {
 }
 
 function Dashboard({ session }) {
+  const dialog = useAppDialog()
   const [view, setView] = useState('dashboard')
   const [month, setMonth] = useState(getMonthKey(new Date()))
   const [entries, setEntries] = useState([])
@@ -166,7 +197,7 @@ function Dashboard({ session }) {
   const grouped = categories.map((category) => ({ category, amount: expensesByCategory[category] })).filter((item) => item.amount > 0)
   const largest = Math.max(...grouped.map((item) => item.amount), 1)
   const filtered = entries.filter((item) => { const neutral = item.affects_balance === false; const matchesType = typeFilter === 'all' || (typeFilter === 'neutral' ? neutral : item.type === typeFilter && !neutral); return matchesType && `${item.description} ${item.category}`.toLowerCase().includes(search.toLowerCase()) })
-  useEffect(() => { const onKey = (event) => { if (event.key === 'Escape') { setModal(null); return } if (view !== 'dashboard' || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return; if (event.key.toLowerCase() === 'n') setModal({}) }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey) }, [view])
+  useEffect(() => { const onKey = (event) => { if (document.querySelector('.app-dialog-backdrop')) return; if (event.key === 'Escape') { setModal(null); return } if (view !== 'dashboard' || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return; if (event.key.toLowerCase() === 'n') setModal({}) }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey) }, [view])
   const saveTransaction = async (draft) => {
     const payload = { type: draft.type, description: draft.description, amount: draft.amount, category: draft.category, date: draft.date }
     if (advancedReady) payload.account_id = draft.account_id || null
@@ -188,11 +219,11 @@ function Dashboard({ session }) {
     } else result = await supabase.from('transactions').insert({ ...payload, user_id: session.user.id })
     if (!result.error && advancedReady && draft.recurring) {
       const recurringResult = await supabase.from('recurring_transactions').insert({ user_id: session.user.id, type: draft.type, description: draft.description, amount: draft.amount, category: draft.category, account_id: draft.account_id || null, day_of_month: Number(draft.date.slice(-2)), start_date: draft.date, last_generated_month: `${draft.date.slice(0, 7)}-01` })
-      if (recurringResult.error) window.alert('O lancamento foi salvo, mas nao foi possivel criar a recorrencia.')
+      if (recurringResult.error) await dialog.alert('O lancamento foi salvo, mas nao foi possivel criar a recorrencia.', { title: 'Recorrencia nao criada' })
     }
     if (!result.error) { setModal(null); load() }
   }
-  const remove = async (id) => { if (!window.confirm('Excluir este lancamento?')) return; await supabase.from('transactions').delete().eq('id', id); load() }
+  const remove = async (id) => { if (!await dialog.confirm('Esta movimentacao sera removida do seu historico e nao podera ser recuperada.', { title: 'Excluir este lancamento?' })) return; await supabase.from('transactions').delete().eq('id', id); load() }
   const saveBudgets = async (draft) => { const rows = Object.entries(draft).filter(([, amount]) => Number(amount) > 0).map(([category, amount]) => ({ user_id: session.user.id, month: `${month}-01`, category, amount: Number(amount) })); const oldRows = budgets.map((budget) => budget.id); if (oldRows.length) await supabase.from('budgets').delete().in('id', oldRows); if (rows.length) await supabase.from('budgets').insert(rows); load() }
   if (view === 'guide') return <main className="app-shell"><header><span className="logo">saldo<span>claro</span></span><div className="user"><span>{session.user.email}</span><button className="link" onClick={() => supabase.auth.signOut()}>Sair</button></div></header><UsageGuide /></main>
   return <main className="app-shell"><header><span className="logo">saldo<span>claro</span></span><div className="user"><span>{session.user.email}</span><button className="link" onClick={() => supabase.auth.signOut()}>Sair</button></div></header><section className="hero"><div><p className="eyebrow">PAINEL FINANCEIRO</p><h1>Seu dinheiro, mais claro.</h1><p>Acompanhe seus movimentos, seus limites e o ritmo das suas financas.</p></div><button className="add" onClick={() => setModal({})}>+ Novo lancamento</button></section><nav className="month-nav"><button onClick={() => setMonth(changeMonth(month, -1))} aria-label="Mes anterior">&larr;</button><strong>{monthLabel.format(new Date(`${month}-01T12:00:00`))}</strong><button onClick={() => setMonth(changeMonth(month, 1))} aria-label="Proximo mes">&rarr;</button></nav><section className="cards"><article className="balance"><p>Saldo do mes</p><strong>{money.format(incomes - expenses)}</strong><span>{incomes >= expenses ? 'Voce esta no positivo' : 'Atencao aos gastos deste mes'}</span></article><article><p>Entradas</p><strong className="income">{money.format(incomes)}</strong><span>Receitas registradas</span></article><article><p>Saidas</p><strong className="expense">{money.format(expenses)}</strong><span>{expenseChange === null ? 'Primeiro mes com dados' : `${expenseChange > 0 ? '+' : ''}${expenseChange}% em relacao ao mes anterior`}</span></article></section><section className="insights"><div><span className="insight-mark">{expenses > incomes ? '!' : '+'}</span><p><b>{expenses > incomes ? 'Os gastos superaram as entradas.' : 'Seu mes esta equilibrado.'}</b>{grouped.length ? ` Sua maior categoria foi ${grouped.sort((a, b) => b.amount - a.amount)[0].category}, com ${money.format(grouped.sort((a, b) => b.amount - a.amount)[0].amount)}.` : ' Adicione lancamentos para receber insights.'}</p></div></section><section className="analytics-grid"><FlowChart entries={allEntries} /><article className="panel spending"><p className="eyebrow">POR CATEGORIA</p><h2>Onde voce mais gasta</h2>{grouped.length === 0 ? <p className="empty">Seus gastos por categoria aparecerao aqui.</p> : grouped.map((item) => <div className="bar-row" key={item.category}><div><span>{item.category}</span><b>{money.format(item.amount)}</b></div><i><em style={{ width: `${(item.amount / largest) * 100}%` }} /></i></div>)}</article></section><section className="lower-grid"><article className="panel transactions"><div className="panel-head"><div><p className="eyebrow">LANCAMENTOS</p><h2>Movimentacoes do mes</h2></div><span>{filtered.length} itens</span></div><div className="filters"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar descricao ou categoria" /><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="all">Todos os tipos</option><option value="income">Entradas</option><option value="expense">Saidas</option><option value="neutral">Neutros</option></select></div>{loading ? <p className="empty">Carregando...</p> : filtered.length === 0 ? <p className="empty">Nenhum lancamento corresponde aos filtros.</p> : <div className="entries">{filtered.map((item) => <TransactionEntry item={item} key={item.id} onEdit={setModal} onRemove={remove} />)}</div>}</article><BudgetPanel month={month} budgets={budgets} expensesByCategory={expensesByCategory} onSave={saveBudgets} ready={budgetReady} /></section>{modal && <TransactionModal entry={modal.id ? modal : null} onClose={() => setModal(null)} onSave={saveTransaction} />}</main>
@@ -202,7 +233,7 @@ function LoadingScreen() {
   return <main className="loading-screen"><div className="loading-aura" /><span className="logo">saldo<span>claro</span></span><div className="loading-copy"><p className="eyebrow">ORGANIZANDO SUAS FINANCAS</p><h1>Clareza leva<br /><i>um instante.</i></h1></div><div className="loading-progress"><i /><span>Preparando seu painel</span></div></main>
 }
 
-export default function App() {
+function AppContent() {
   const [session, setSession] = useState(null)
   const [transitioning, setTransitioning] = useState(false)
   const timerRef = useRef(null)
@@ -211,4 +242,8 @@ export default function App() {
   if (!configured) return <main className="setup"><span className="logo">saldo<span>claro</span></span><h1>Conecte seu Supabase</h1><p>Copie <code>.env.example</code> para <code>.env</code>, informe a URL e a chave anon publica do seu projeto. Depois execute o SQL em <code>supabase/schema.sql</code>.</p></main>
   if (transitioning) return <LoadingScreen />
   return session ? <Dashboard session={session} /> : <Auth onSession={beginSession} />
+}
+
+export default function App() {
+  return <DialogProvider><AppContent /></DialogProvider>
 }
