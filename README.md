@@ -17,6 +17,8 @@ Depois, execute `004_security_hardening.sql` para restringir as funcoes do banco
 
 Execute tambem `005_optional_savings_expense.sql` para escolher se cada aporte em uma caixinha deve ser contado como saida.
 
+Por fim, execute `006_neutral_savings_history.sql` para exibir no historico os aportes que nao alteram o saldo.
+
 Nao coloque a `service_role key` no `.env`: ela e secreta e nunca deve ir para o navegador.
 
 ## Hospedagem gratuita
