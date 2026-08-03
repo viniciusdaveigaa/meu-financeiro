@@ -4,14 +4,15 @@ import { configured, supabase } from './supabase'
 const categories = ['Salario', 'Caixinha', 'Moradia', 'Alimentacao', 'Transporte', 'Lazer', 'Saude', 'Educacao', 'Assinaturas', 'Outros']
 const categoryLabels = { Salario: 'Salário', Caixinha: 'Caixinha', Moradia: 'Moradia', Alimentacao: 'Alimentação', Transporte: 'Transporte', Lazer: 'Lazer', Saude: 'Saúde', Educacao: 'Educação', Assinaturas: 'Assinaturas', Outros: 'Outros' }
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
-const isoToday = new Date().toISOString().slice(0, 10)
+const localISODate = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+const isoToday = localISODate()
 const emptyEntry = { type: 'expense', description: '', amount: '', category: 'Alimentacao', date: isoToday, account_id: '', installment: false, installments: 1, recurring: false }
 const monthLabel = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
 const shortMonth = new Intl.DateTimeFormat('pt-BR', { month: 'short' })
 
 function getMonthKey(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}` }
 function changeMonth(value, direction) { const date = new Date(`${value}-01T12:00:00`); date.setMonth(date.getMonth() + direction); return getMonthKey(date) }
-function getMonthRange(value) { const [year, month] = value.split('-').map(Number); return { from: `${value}-01`, to: new Date(year, month, 0).toISOString().slice(0, 10) } }
+function getMonthRange(value) { const [year, month] = value.split('-').map(Number); return { from: `${value}-01`, to: `${value}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}` } }
 function dateInMonth(value, day) { const [year, month] = value.split('-').map(Number); const safeDay = Math.min(day, new Date(year, month, 0).getDate()); return `${value}-${String(safeDay).padStart(2, '0')}` }
 function dateLabel(value) { return new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR') }
 function total(items, type) { return items.filter((item) => item.type === type && item.affects_balance !== false).reduce((sum, item) => sum + Number(item.amount), 0) }
@@ -53,16 +54,24 @@ function Auth({ onSession }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const submit = async (event) => {
     event.preventDefault()
     setMessage('')
-    const result = mode === 'login' ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({ email, password })
-    if (result.error) setMessage(result.error.message)
-    else if (mode === 'signup' && result.data.session) onSession(result.data.session)
-    else if (mode === 'signup') setMessage('Conta criada. Confira seu e-mail para confirmar o acesso.')
-    else onSession(result.data.session)
+    setSubmitting(true)
+    try {
+      const result = mode === 'login' ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({ email, password })
+      if (result.error) setMessage(result.error.message)
+      else if (mode === 'signup' && result.data.session) onSession(result.data.session)
+      else if (mode === 'signup') setMessage('Conta criada. Confira seu e-mail para confirmar o acesso.')
+      else onSession(result.data.session)
+    } catch {
+      setMessage('Não foi possível conectar. Verifique sua internet e tente novamente.')
+    } finally {
+      setSubmitting(false)
+    }
   }
-  return <main className="auth-shell"><section className="auth-intro"><p className="eyebrow">FINANÇAS PESSOAIS</p><h1>Dinheiro em ordem.<br />Mente tranquila.</h1><p>Um espaço simples e seguro para entender para onde seu dinheiro vai.</p><div className="orb" /></section><section className="auth-card"><span className="logo">saldo<span>claro</span></span><h2>{mode === 'login' ? 'Bem-vindo de volta' : 'Comece sem complicação'}</h2><p className="muted">{mode === 'login' ? 'Entre para ver seu resumo financeiro.' : 'Crie sua conta gratuita em poucos segundos.'}</p><form onSubmit={submit}><label>E-mail<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label><label>Senha<input type="password" minLength="6" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>{message && <p className="form-message">{message}</p>}<button>{mode === 'login' ? 'Entrar' : 'Criar conta'}</button></form><p className="switch">{mode === 'login' ? 'Ainda não tem uma conta?' : 'Já possui uma conta?'} <button type="button" onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setMessage('') }}>{mode === 'login' ? 'Cadastre-se' : 'Entrar'}</button></p></section></main>
+  return <main className="auth-shell"><section className="auth-intro"><p className="eyebrow">FINANÇAS PESSOAIS</p><h1>Dinheiro em ordem.<br />Mente tranquila.</h1><p>Um espaço simples e seguro para entender para onde seu dinheiro vai.</p><div className="orb" /></section><section className="auth-card"><span className="logo">saldo<span>claro</span></span><h2>{mode === 'login' ? 'Bem-vindo de volta' : 'Comece sem complicação'}</h2><p className="muted">{mode === 'login' ? 'Entre para ver seu resumo financeiro.' : 'Crie sua conta gratuita em poucos segundos.'}</p><form onSubmit={submit}><label>E-mail<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} disabled={submitting} required /></label><label>Senha<input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength="6" value={password} onChange={(event) => setPassword(event.target.value)} disabled={submitting} required /></label>{message && <p className="form-message" role="status">{message}</p>}<button disabled={submitting}>{submitting ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}</button></form><p className="switch">{mode === 'login' ? 'Ainda não tem uma conta?' : 'Já possui uma conta?'} <button type="button" disabled={submitting} onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setMessage('') }}>{mode === 'login' ? 'Cadastre-se' : 'Entrar'}</button></p></section></main>
 }
 
 function FlowChart({ entries }) {
@@ -80,6 +89,26 @@ function FlowChart({ entries }) {
   return <article className="panel chart-panel"><div className="panel-head"><div><p className="eyebrow">EVOLUÇÃO</p><h2>{mode === 'balance' ? 'Saldo acumulado' : 'Entradas e saídas'}</h2></div><div className="chart-tabs"><button className={mode === 'line' ? 'active' : ''} onClick={() => setMode('line')}>Linhas</button><button className={mode === 'bar' ? 'active' : ''} onClick={() => setMode('bar')}>Barras</button><button className={mode === 'balance' ? 'active' : ''} onClick={() => setMode('balance')}>Saldo</button></div></div><div className="legend"><span><i className="income-dot" /> Entradas</span><span><i className="expense-dot" /> Saídas</span></div><svg viewBox="0 0 314 150" role="img" aria-label="Gráfico financeiro dos últimos seis meses"><path className="grid-line" d="M20 20H300M20 72H300M20 124H300" />{mode === 'line' && <><polyline className="income-line" points={points.map((point, index) => coordinate(point.income, index)).join(' ')} /><polyline className="expense-line" points={points.map((point, index) => coordinate(point.expense, index)).join(' ')} /></>}{mode === 'bar' && points.map((point, index) => <g key={point.key}><rect className="income-bar" x={12 + index * 54} y={124 - (point.income / highest) * 104} width="16" height={(point.income / highest) * 104} rx="4" /><rect className="expense-bar" x={31 + index * 54} y={124 - (point.expense / highest) * 104} width="16" height={(point.expense / highest) * 104} rx="4" /></g>)}{mode === 'balance' && <><path className="balance-area" d={`M22 124 L${balancePoints.map((point, index) => balanceCoordinate(point.balance, index)).join(' L')} L292 124 Z`} /><polyline className="balance-line" points={balancePoints.map((point, index) => balanceCoordinate(point.balance, index)).join(' ')} /></>}{points.map((point, index) => <text key={point.key} x={22 + index * 54} y="146" textAnchor="middle">{point.label}</text>)}</svg></article>
 }
 
+function FinancialPulse({ month, incomes, expenses, budgets, expensesByCategory }) {
+  const now = new Date()
+  const currentMonth = getMonthKey(now)
+  const [year, monthNumber] = month.split('-').map(Number)
+  const daysInMonth = new Date(year, monthNumber, 0).getDate()
+  const elapsedDays = month < currentMonth ? daysInMonth : month === currentMonth ? now.getDate() : 0
+  const projectedExpenses = elapsedDays ? (expenses / elapsedDays) * daysInMonth : expenses
+  const savingsRate = incomes > 0 ? ((incomes - expenses) / incomes) * 100 : 0
+  const dailyAverage = elapsedDays ? expenses / elapsedDays : 0
+  const budgetTotal = budgets.reduce((sum, budget) => sum + Number(budget.amount), 0)
+  const budgetSpent = budgets.reduce((sum, budget) => sum + (expensesByCategory[budget.category] || 0), 0)
+  const budgetUsage = budgetTotal > 0 ? (budgetSpent / budgetTotal) * 100 : 0
+  const score = incomes > 0 ? Math.max(0, Math.min(100, Math.round(55 + savingsRate * 0.7 - Math.max(0, budgetUsage - 100) * 0.35))) : 0
+  const status = score >= 80 ? 'Excelente' : score >= 60 ? 'Saudável' : score >= 40 ? 'Em atenção' : incomes > 0 ? 'Precisa de cuidado' : 'Sem dados suficientes'
+  const projectionLabel = month === currentMonth ? 'Projeção no fim do mês' : month < currentMonth ? 'Fechamento realizado' : 'Projeção indisponível'
+  const projectionValue = month === currentMonth ? projectedExpenses : expenses
+
+  return <section className="financial-pulse"><article className="pulse-score"><div className="score-ring" style={{ '--score': `${score * 3.6}deg` }}><span>{score}</span><small>/100</small></div><div><p className="eyebrow">SAÚDE FINANCEIRA</p><h2>{status}</h2><p>{incomes > 0 ? 'Nota calculada pelo equilíbrio entre renda, gastos e orçamento.' : 'Registre uma entrada para calcular sua saúde financeira.'}</p></div></article><div className="pulse-metrics"><article><span>Taxa de economia</span><strong className={savingsRate >= 0 ? 'positive' : 'negative'}>{incomes > 0 ? `${Math.round(savingsRate)}%` : '—'}</strong><small>Quanto da renda permaneceu livre</small></article><article><span>Média diária</span><strong>{money.format(dailyAverage)}</strong><small>Ritmo de gastos até agora</small></article><article><span>{projectionLabel}</span><strong>{money.format(projectionValue)}</strong><small>{month === currentMonth && projectedExpenses > incomes && incomes > 0 ? 'Pode ultrapassar suas entradas' : 'Estimativa baseada no período'}</small></article><article><span>Uso do orçamento</span><strong>{budgetTotal > 0 ? `${Math.round(budgetUsage)}%` : '—'}</strong><small>{budgetTotal > 0 ? `${money.format(budgetSpent)} de ${money.format(budgetTotal)}` : 'Defina limites por categoria'}</small></article></div></section>
+}
+
 function SavingsPanel() {
   const dialog = useAppDialog()
   const [boxes, setBoxes] = useState([])
@@ -91,9 +120,9 @@ function SavingsPanel() {
   const [ready, setReady] = useState(true)
   const load = async () => { const [boxResult, contributionResult] = await Promise.all([supabase.from('savings_boxes').select('*').order('created_at'), supabase.from('savings_contributions').select('*')]); if (boxResult.error || contributionResult.error) { setReady(false); return } setReady(true); setBoxes(boxResult.data || []); setContributions(contributionResult.data || []) }
   useEffect(() => { load() }, [])
-  const createBox = async (event) => { event.preventDefault(); if (!name.trim()) return; const { data } = await supabase.auth.getUser(); const { error } = await supabase.from('savings_boxes').insert({ user_id: data.user.id, name: name.trim(), target_amount: target ? Number(target) : null }); if (!error) { setName(''); setTarget(''); load() } }
+  const createBox = async (event) => { event.preventDefault(); if (!name.trim()) return; const { data } = await supabase.auth.getUser(); const { error } = await supabase.from('savings_boxes').insert({ user_id: data.user.id, name: name.trim(), target_amount: target ? Number(target) : null }); if (error) return dialog.alert(error.message, { title: 'Caixinha não criada' }); setName(''); setTarget(''); load() }
   const contribute = async (box) => { const amount = inputToAmount(amounts[box.id]); if (!(amount > 0)) return; const { error } = await supabase.rpc('add_savings_contribution_v2', { p_box_id: box.id, p_amount: amount, p_date: isoToday, p_count_as_expense: countAsExpense[box.id] !== false }); if (error) return dialog.alert(error.message, { title: 'Aporte não realizado' }); setAmounts({ ...amounts, [box.id]: '' }); await load(); window.dispatchEvent(new Event('finance-data-changed')) }
-  const removeBox = async (id) => { if (!await dialog.confirm('A caixinha e todo o histórico de aportes serão excluídos. As movimentações financeiras existentes serão mantidas.', { title: 'Excluir esta caixinha?' })) return; await supabase.from('savings_boxes').delete().eq('id', id); load() }
+  const removeBox = async (id) => { if (!await dialog.confirm('A caixinha e todo o histórico de aportes serão excluídos. As movimentações financeiras existentes serão mantidas.', { title: 'Excluir esta caixinha?' })) return; const { error } = await supabase.from('savings_boxes').delete().eq('id', id); if (error) return dialog.alert(error.message, { title: 'Caixinha não excluída' }); load() }
   if (!ready) return <section className="savings-disabled"><p className="empty">Execute a migração <code>003_savings_boxes.sql</code> para ativar as caixinhas.</p></section>
   return <section className="savings"><div className="savings-head"><div><p className="eyebrow">CAIXINHAS</p><h3>Dinheiro reservado</h3></div><span>{money.format(contributions.reduce((sum, item) => sum + Number(item.amount), 0))}</span></div><div className="savings-grid">{boxes.map((box) => { const saved = contributions.filter((item) => item.box_id === box.id).reduce((sum, item) => sum + Number(item.amount), 0); const progress = box.target_amount ? Math.min((saved / Number(box.target_amount)) * 100, 100) : 0; return <article className="saving-box" key={box.id}><button className="saving-remove" onClick={() => removeBox(box.id)}>x</button><span className="saving-icon">$</span><b>{box.name}</b><strong>{money.format(saved)}</strong>{box.target_amount && <><small>Meta: {money.format(box.target_amount)}</small><i><em style={{ width: `${progress}%` }} /></i></>}<label className="saving-expense-flag"><input type="checkbox" checked={countAsExpense[box.id] !== false} onChange={(event) => setCountAsExpense({ ...countAsExpense, [box.id]: event.target.checked })} />Contar como saída</label><div><input type="text" inputMode="numeric" autoComplete="off" placeholder="0,00" aria-label="Valor do aporte em reais" value={amounts[box.id] || ''} onChange={(event) => setAmounts({ ...amounts, [box.id]: formatAmountInput(event.target.value) })} /><button onClick={() => contribute(box)}>Guardar</button></div></article> })}</div><form className="new-saving" onSubmit={createBox}><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Nome da nova caixinha" /><input type="number" min="0.01" step="0.01" value={target} onChange={(event) => setTarget(event.target.value)} placeholder="Meta (opcional)" /><button>Criar caixinha</button></form></section>
 }
@@ -116,6 +145,7 @@ function AdvancedPanel({ month }) {
       if (!due.length || generatingRef.current) return
       generatingRef.current = true
       let generated = false
+      let generationFailed = false
       try {
         for (const item of due) {
           const lastMonth = (item.last_generated_month || `${item.start_date.slice(0, 7)}-01`).slice(0, 7)
@@ -130,18 +160,20 @@ function AdvancedPanel({ month }) {
           if (!error) {
             const { error: updateError } = await supabase.from('recurring_transactions').update({ last_generated_month: targetMonth }).eq('id', item.id)
             generated = generated || !updateError
-          }
+            generationFailed = generationFailed || Boolean(updateError)
+          } else generationFailed = true
         }
         if (generated) { window.dispatchEvent(new Event('finance-data-changed')); await load() }
+        if (generationFailed) await dialog.alert('Alguns lançamentos recorrentes não puderam ser gerados. Tente recarregar o painel.', { title: 'Recorrências incompletas' })
       } finally {
         generatingRef.current = false
       }
     }
     run()
   }, [recurring, month])
-  const add = async (event) => { event.preventDefault(); if (!name.trim()) return; const { data } = await supabase.auth.getUser(); const { error } = await supabase.from('accounts').insert({ name: name.trim(), kind, user_id: data.user.id }); if (!error) { setName(''); load() } }
-  const removeAccount = async (id) => { if (!await dialog.confirm('A conta ou o cartão será removido, mas os lançamentos vinculados continuarão no seu histórico.', { title: 'Excluir conta ou cartão?' })) return; await supabase.from('accounts').delete().eq('id', id); load() }
-  const toggleRecurring = async (item) => { await supabase.from('recurring_transactions').update({ active: !item.active }).eq('id', item.id); load() }
+  const add = async (event) => { event.preventDefault(); if (!name.trim()) return; const { data } = await supabase.auth.getUser(); const { error } = await supabase.from('accounts').insert({ name: name.trim(), kind, user_id: data.user.id }); if (error) return dialog.alert(error.message, { title: 'Conta não adicionada' }); setName(''); load() }
+  const removeAccount = async (id) => { if (!await dialog.confirm('A conta ou o cartão será removido, mas os lançamentos vinculados continuarão no seu histórico.', { title: 'Excluir conta ou cartão?' })) return; const { error } = await supabase.from('accounts').delete().eq('id', id); if (error) return dialog.alert(error.message, { title: 'Conta não excluída' }); load() }
+  const toggleRecurring = async (item) => { const { error } = await supabase.from('recurring_transactions').update({ active: !item.active }).eq('id', item.id); if (error) return dialog.alert(error.message, { title: 'Recorrência não atualizada' }); load() }
   const removeRecurring = async (item) => { if (!await dialog.confirm(`A repetição mensal de “${item.description}” será encerrada. Os lançamentos já registrados serão mantidos.`, { title: 'Excluir recorrência?' })) return; const { error } = await supabase.from('recurring_transactions').delete().eq('id', item.id); if (error) return dialog.alert(error.message, { title: 'Recorrência não excluída' }); await load() }
   if (!ready) return <div className="advanced-block"><p className="empty">Execute a migração <code>002_daily_control.sql</code> para ativar contas, cartões, parcelas e recorrências.</p></div>
   return <div className="advanced-block"><div className="account-list">{accounts.map((account) => <div key={account.id}><span className={`account-icon ${account.kind}`}>{account.kind === 'card' ? 'C' : 'B'}</span><b>{account.name}<small>{account.kind === 'card' ? 'Cartão' : 'Conta'}</small></b><button className="delete" onClick={() => removeAccount(account.id)}>x</button></div>)}</div><form className="inline-form" onSubmit={add}><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Nova conta ou cartão" /><select value={kind} onChange={(event) => setKind(event.target.value)}><option value="account">Conta</option><option value="card">Cartão</option></select><button>Adicionar</button></form><div className="recurring-list">{recurring.length ? recurring.map((item) => <div key={item.id}><span>{item.description}<small>Todo dia {item.day_of_month} · {categoryLabel(item.category)}</small></span><b className={item.type}>{item.type === 'income' ? '+' : '-'} {money.format(item.amount)}</b><div className="recurring-actions"><button className="text-button" onClick={() => toggleRecurring(item)}>{item.active ? 'Pausar' : 'Retomar'}</button><button className="recurring-delete" onClick={() => removeRecurring(item)}>Excluir</button></div></div>) : <p className="empty">Lançamentos mensais aparecerão aqui.</p>}</div><SavingsPanel /></div>
@@ -150,10 +182,11 @@ function AdvancedPanel({ month }) {
 function BudgetPanel({ month, budgets, expensesByCategory, onSave, ready }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState({})
+  const [saving, setSaving] = useState(false)
   const startEdit = () => { setDraft(Object.fromEntries(budgets.map((budget) => [budget.category, budget.amount]))); setEditing(true) }
-  const submit = (event) => { event.preventDefault(); onSave(draft); setEditing(false) }
+  const submit = async (event) => { event.preventDefault(); setSaving(true); const saved = await onSave(draft); setSaving(false); if (saved) setEditing(false) }
   if (!ready) return <article className="panel budget-panel"><p className="eyebrow">ORÇAMENTOS</p><h2>Planeje seus gastos</h2><p className="empty">Execute a atualização do banco em <code>supabase/schema.sql</code> para ativar os orçamentos.</p></article>
-  return <article className="panel budget-panel"><div className="panel-head"><div><p className="eyebrow">ORÇAMENTOS</p><h2>Limites de {monthLabel.format(new Date(`${month}-01T12:00:00`))}</h2></div><button className="text-button" onClick={editing ? () => setEditing(false) : startEdit}>{editing ? 'Cancelar' : 'Editar'}</button></div>{editing ? <form className="budget-form" onSubmit={submit}>{categories.map((category) => <label key={category}>{categoryLabel(category)}<input type="number" min="0" step="0.01" placeholder="Sem limite" value={draft[category] ?? ''} onChange={(event) => setDraft({ ...draft, [category]: event.target.value })} /></label>)}<button>Salvar orçamentos</button></form> : <div className="budget-list">{budgets.map((budget) => { const spent = expensesByCategory[budget.category] || 0; const ratio = Math.min((spent / Number(budget.amount)) * 100, 100); return <div className="budget-row" key={budget.category}><div><span>{categoryLabel(budget.category)}</span><b>{money.format(spent)} <small>de {money.format(budget.amount)}</small></b></div><i><em style={{ width: `${ratio}%` }} /></i></div> })}</div>}<p className="eyebrow advanced-title">CONTAS, CARTÕES E RECORRENTES</p><AdvancedPanel month={month} /></article>
+  return <article className="panel budget-panel"><div className="panel-head"><div><p className="eyebrow">ORÇAMENTOS</p><h2>Limites de {monthLabel.format(new Date(`${month}-01T12:00:00`))}</h2></div><button className="text-button" disabled={saving} onClick={editing ? () => setEditing(false) : startEdit}>{editing ? 'Cancelar' : 'Editar'}</button></div>{editing ? <form className="budget-form" onSubmit={submit}>{categories.map((category) => <label key={category}>{categoryLabel(category)}<input type="number" min="0" step="0.01" placeholder="Sem limite" value={draft[category] ?? ''} onChange={(event) => setDraft({ ...draft, [category]: event.target.value })} /></label>)}<button disabled={saving}>{saving ? 'Salvando...' : 'Salvar orçamentos'}</button></form> : <div className="budget-list">{budgets.length ? budgets.map((budget) => { const spent = expensesByCategory[budget.category] || 0; const ratio = Math.min((spent / Number(budget.amount)) * 100, 100); return <div className="budget-row" key={budget.category}><div><span>{categoryLabel(budget.category)}</span><b>{money.format(spent)} <small>de {money.format(budget.amount)}</small></b></div><i><em style={{ width: `${ratio}%` }} /></i></div> }) : <p className="empty">Defina limites para acompanhar seus gastos por categoria.</p>}</div>}<p className="eyebrow advanced-title">CONTAS, CARTÕES E RECORRENTES</p><AdvancedPanel month={month} /></article>
 }
 
 function TransactionModal({ entry, onClose, onSave }) {
@@ -161,10 +194,11 @@ function TransactionModal({ entry, onClose, onSave }) {
   const [draft, setDraft] = useState(entry ? { ...entry, amount: amountToInput(entry.amount), installment: Number(entry.installment_total) > 1, installments: Number(entry.installment_total) > 1 ? entry.installment_total : 1, recurring: false } : emptyEntry)
   const [accounts, setAccounts] = useState([])
   const [advancedReady, setAdvancedReady] = useState(false)
+  const [saving, setSaving] = useState(false)
   const editing = Boolean(entry?.id)
   useEffect(() => { supabase.from('accounts').select('*').order('created_at').then(({ data, error }) => { setAdvancedReady(!error); setAccounts(data || []) }) }, [])
-  const submit = (event) => { event.preventDefault(); const amount = inputToAmount(draft.amount); if (!(amount > 0)) return dialog.alert('Informe um valor maior que zero.', { title: 'Valor inválido' }); if (draft.installment_group_id && draft.recurring) return dialog.alert('Uma parcela existente não pode ser transformada em recorrência.', { title: 'Recorrência indisponível' }); onSave({ ...draft, amount }) }
-  return <div className="modal-backdrop"><form className="modal" onSubmit={submit}><button className="close" type="button" onClick={onClose}>x</button><p className="eyebrow">{editing ? 'EDITAR LANÇAMENTO' : 'NOVO LANÇAMENTO'}</p><h2>{editing ? 'Atualize a movimentação' : 'Registrar movimentação'}</h2><div className="type-picker"><button type="button" className={draft.type === 'expense' ? 'active expense-bg' : ''} onClick={() => setDraft({ ...draft, type: 'expense' })}>Saída</button><button type="button" className={draft.type === 'income' ? 'active income-bg' : ''} onClick={() => setDraft({ ...draft, type: 'income', installment: false, installments: 1 })}>Entrada</button></div><label>Descrição<input value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} required placeholder="Ex.: Mercado" /></label><div className="fields"><label>Valor<input type="text" inputMode="numeric" autoComplete="off" value={draft.amount} onChange={(event) => setDraft({ ...draft, amount: formatAmountInput(event.target.value) })} required placeholder="0,00" aria-label="Valor em reais" /></label><label>Data<input type="date" value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} required /></label></div><label>Categoria<select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{categories.map((category) => <option value={category} key={category}>{categoryLabel(category)}</option>)}</select></label>{advancedReady && <><label>Conta ou cartão<select value={draft.account_id || ''} onChange={(event) => setDraft({ ...draft, account_id: event.target.value })}><option value="">Sem conta definida</option>{accounts.map((account) => <option value={account.id} key={account.id}>{account.name} ({account.kind === 'card' ? 'Cartão' : 'Conta'})</option>)}</select></label><div className="financial-options"><label className="check-label"><input type="checkbox" checked={draft.installment} disabled={draft.type !== 'expense' || Boolean(draft.installment_group_id)} onChange={(event) => setDraft({ ...draft, installment: event.target.checked, installments: event.target.checked ? 2 : 1, recurring: false })} /> Compra parcelada</label><label className="check-label"><input type="checkbox" checked={draft.recurring} onChange={(event) => setDraft({ ...draft, recurring: event.target.checked, installment: false, installments: 1 })} /> Repetir mensalmente</label></div>{draft.installment && <label>Quantidade de parcelas<input type="number" min="2" max="48" disabled={Boolean(draft.installment_group_id)} value={draft.installments} onChange={(event) => setDraft({ ...draft, installments: event.target.value })} /></label>}{draft.installment_group_id && <p className="installment-note">Este item pertence a um parcelamento existente. A edição altera somente esta parcela.</p>}</>}<button>{editing ? 'Salvar alterações' : 'Salvar lançamento'}</button></form></div>
+  const submit = async (event) => { event.preventDefault(); const amount = inputToAmount(draft.amount); if (!(amount > 0)) return dialog.alert('Informe um valor maior que zero.', { title: 'Valor inválido' }); if (draft.installment_group_id && draft.recurring) return dialog.alert('Uma parcela existente não pode ser transformada em recorrência.', { title: 'Recorrência indisponível' }); setSaving(true); await onSave({ ...draft, amount }); setSaving(false) }
+  return <div className="modal-backdrop"><form className="modal" onSubmit={submit} aria-busy={saving}><button className="close" type="button" disabled={saving} onClick={onClose} aria-label="Fechar formulário">×</button><p className="eyebrow">{editing ? 'EDITAR LANÇAMENTO' : 'NOVO LANÇAMENTO'}</p><h2>{editing ? 'Atualize a movimentação' : 'Registrar movimentação'}</h2><div className="type-picker"><button type="button" className={draft.type === 'expense' ? 'active expense-bg' : ''} onClick={() => setDraft({ ...draft, type: 'expense' })}>Saída</button><button type="button" className={draft.type === 'income' ? 'active income-bg' : ''} onClick={() => setDraft({ ...draft, type: 'income', installment: false, installments: 1 })}>Entrada</button></div><label>Descrição<input value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} required placeholder="Ex.: Mercado" /></label><div className="fields"><label>Valor<input type="text" inputMode="numeric" autoComplete="off" value={draft.amount} onChange={(event) => setDraft({ ...draft, amount: formatAmountInput(event.target.value) })} required placeholder="0,00" aria-label="Valor em reais" /></label><label>Data<input type="date" value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} required /></label></div><label>Categoria<select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{categories.map((category) => <option value={category} key={category}>{categoryLabel(category)}</option>)}</select></label>{advancedReady && <><label>Conta ou cartão<select value={draft.account_id || ''} onChange={(event) => setDraft({ ...draft, account_id: event.target.value })}><option value="">Sem conta definida</option>{accounts.map((account) => <option value={account.id} key={account.id}>{account.name} ({account.kind === 'card' ? 'Cartão' : 'Conta'})</option>)}</select></label><div className="financial-options"><label className="check-label"><input type="checkbox" checked={draft.installment} disabled={draft.type !== 'expense' || Boolean(draft.installment_group_id)} onChange={(event) => setDraft({ ...draft, installment: event.target.checked, installments: event.target.checked ? 2 : 1, recurring: false })} /> Compra parcelada</label><label className="check-label"><input type="checkbox" checked={draft.recurring} onChange={(event) => setDraft({ ...draft, recurring: event.target.checked, installment: false, installments: 1 })} /> Repetir mensalmente</label></div>{draft.installment && <label>Quantidade de parcelas<input type="number" min="2" max="48" disabled={Boolean(draft.installment_group_id)} value={draft.installments} onChange={(event) => setDraft({ ...draft, installments: event.target.value })} /></label>}{draft.installment_group_id && <p className="installment-note">Este item pertence a um parcelamento existente. A edição altera somente esta parcela.</p>}</>}<button disabled={saving}>{saving ? 'Salvando...' : editing ? 'Salvar alterações' : 'Salvar lançamento'}</button></form></div>
 }
 
 function UsageGuide() {
@@ -188,6 +222,19 @@ function TransactionEntry({ item, onEdit, onRemove }) {
   return <div className={`entry ${neutral ? 'neutral-entry' : ''}`}><span className={`entry-icon ${visualType}`}>{neutral ? '=' : signal}</span><div><strong>{item.description}</strong><small>{categoryLabel(item.category)} · {dateLabel(item.date)}{neutral ? ' · Não altera o saldo' : ''}</small></div><b className={visualType}>{signal} {money.format(item.amount)}</b><button className="edit" onClick={() => onEdit(item)} aria-label="Editar lançamento">Editar</button><button className="delete" onClick={() => onRemove(item)} aria-label="Excluir lançamento">x</button></div>
 }
 
+function AppHeader({ email, view, onViewChange }) {
+  return <header><span className="logo">saldo<span>claro</span></span><nav className="dashboard-nav" aria-label="Navegação principal"><button className={view === 'dashboard' ? 'active' : ''} onClick={() => onViewChange('dashboard')}>Painel</button><button className={view === 'guide' ? 'active' : ''} onClick={() => onViewChange('guide')}>Como usar</button></nav><div className="user"><span>{email}</span><button className="link" onClick={() => supabase.auth.signOut()}>Sair</button></div></header>
+}
+
+function MonthNavigator({ month, onChange }) {
+  const [selectedYear, selectedMonth] = month.split('-')
+  const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+  const currentYear = new Date().getFullYear()
+  const defaultYears = Array.from({ length: 14 }, (_, index) => String(currentYear + 3 - index))
+  const years = defaultYears.includes(selectedYear) ? defaultYears : [selectedYear, ...defaultYears].sort((a, b) => Number(b) - Number(a))
+  return <nav className="month-nav" aria-label="Período do painel"><button onClick={() => onChange(changeMonth(month, -1))} aria-label="Mês anterior">&larr;</button><strong>{monthLabel.format(new Date(`${month}-01T12:00:00`))}</strong><div className="month-picker"><select aria-label="Selecionar mês" value={selectedMonth} onChange={(event) => onChange(`${selectedYear}-${event.target.value}`)}>{monthNames.map((label, index) => <option key={label} value={String(index + 1).padStart(2, '0')}>{label}</option>)}</select><select aria-label="Selecionar ano" value={selectedYear} onChange={(event) => onChange(`${event.target.value}-${selectedMonth}`)}>{years.map((year) => <option key={year} value={year}>{year}</option>)}</select></div><button onClick={() => onChange(changeMonth(month, 1))} aria-label="Próximo mês">&rarr;</button></nav>
+}
+
 function Dashboard({ session }) {
   const dialog = useAppDialog()
   const [view, setView] = useState('dashboard')
@@ -198,11 +245,15 @@ function Dashboard({ session }) {
   const [budgetReady, setBudgetReady] = useState(true)
   const [advancedReady, setAdvancedReady] = useState(true)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [modal, setModal] = useState(null)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
+  const loadSequenceRef = useRef(0)
   const load = async () => {
+    const sequence = ++loadSequenceRef.current
     setLoading(true)
+    setLoadError('')
     const range = getMonthRange(month)
     const [monthly, historic, budgetResult, accountsResult, recurringResult] = await Promise.all([
       supabase.from('transactions').select('*').gte('date', range.from).lte('date', range.to).order('date', { ascending: false }),
@@ -211,16 +262,16 @@ function Dashboard({ session }) {
       supabase.from('accounts').select('*').order('created_at'),
       supabase.from('recurring_transactions').select('*').order('created_at', { ascending: false }),
     ])
-    setEntries(monthly.data || [])
-    setAllEntries([...(historic.data || []), { date: range.to, type: 'marker', amount: 0 }])
+    if (sequence !== loadSequenceRef.current) return
+    if (monthly.error || historic.error) setLoadError('Não foi possível carregar todos os dados financeiros. Tente novamente em instantes.')
+    if (!monthly.error) setEntries(monthly.data || [])
+    if (!historic.error) setAllEntries([...(historic.data || []), { date: range.to, type: 'marker', amount: 0 }])
     if (budgetResult.error) { setBudgetReady(false); setBudgets([]) } else { setBudgetReady(true); setBudgets(budgetResult.data || []) }
     setAdvancedReady(!accountsResult.error && !recurringResult.error)
     setLoading(false)
   }
   useEffect(() => { load() }, [month])
   useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }) }, [view])
-  useEffect(() => { const header = document.querySelector('.app-shell>header'); if (!header) return; const nav = document.createElement('nav'); nav.className = 'dashboard-nav'; const dashboardButton = document.createElement('button'); const guideButton = document.createElement('button'); dashboardButton.textContent = 'Painel'; guideButton.textContent = 'Como usar'; dashboardButton.className = view === 'dashboard' ? 'active' : ''; guideButton.className = view === 'guide' ? 'active' : ''; dashboardButton.addEventListener('click', () => setView('dashboard')); guideButton.addEventListener('click', () => setView('guide')); nav.append(dashboardButton, guideButton); header.insertBefore(nav, header.querySelector('.user')); return () => nav.remove() }, [view])
-  useEffect(() => { if (view !== 'dashboard') return; const nav = document.querySelector('.month-nav'); if (!nav) return; const [selectedYear, selectedMonth] = month.split('-'); const picker = document.createElement('div'); picker.className = 'month-picker'; const monthSelect = document.createElement('select'); const yearSelect = document.createElement('select'); ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'].forEach((label, index) => monthSelect.add(new Option(label, String(index + 1).padStart(2, '0'), false, String(index + 1).padStart(2, '0') === selectedMonth))); const currentYear = new Date().getFullYear(); for (let year = currentYear + 3; year >= currentYear - 10; year--) yearSelect.add(new Option(String(year), String(year), false, String(year) === selectedYear)); if (![...yearSelect.options].some((option) => option.value === selectedYear)) yearSelect.add(new Option(selectedYear, selectedYear, true, true)); const update = () => setMonth(`${yearSelect.value}-${monthSelect.value}`); monthSelect.addEventListener('change', update); yearSelect.addEventListener('change', update); picker.append(monthSelect, yearSelect); nav.insertBefore(picker, nav.lastElementChild); return () => { monthSelect.removeEventListener('change', update); yearSelect.removeEventListener('change', update); picker.remove() } }, [month, view])
   useEffect(() => { const refresh = () => load(); window.addEventListener('finance-data-changed', refresh); return () => window.removeEventListener('finance-data-changed', refresh) }, [month])
   const incomes = total(entries, 'income')
   const expenses = total(entries, 'expense')
@@ -232,6 +283,8 @@ function Dashboard({ session }) {
   const grouped = categories.map((category) => ({ category, amount: expensesByCategory[category] })).filter((item) => item.amount > 0)
   const largest = Math.max(...grouped.map((item) => item.amount), 1)
   const filtered = entries.filter((item) => { const neutral = item.affects_balance === false; const matchesType = typeFilter === 'all' || (typeFilter === 'neutral' ? neutral : item.type === typeFilter && !neutral); return matchesType && searchableText(`${item.description} ${item.category} ${categoryLabel(item.category)}`).includes(searchableText(search)) })
+  const filtersActive = Boolean(search || typeFilter !== 'all')
+  const filteredBalance = total(filtered, 'income') - total(filtered, 'expense')
   useEffect(() => { const onKey = (event) => { if (document.querySelector('.app-dialog-backdrop')) return; if (event.key === 'Escape') { setModal(null); return } if (view !== 'dashboard' || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return; if (event.key.toLowerCase() === 'n') setModal({}) }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey) }, [view])
   const saveTransaction = async (draft) => {
     const payload = { type: draft.type, description: draft.description, amount: draft.amount, category: draft.category, date: draft.date }
@@ -253,16 +306,26 @@ function Dashboard({ session }) {
       result = await supabase.from('transactions').insert(rows)
     } else result = await supabase.from('transactions').insert({ ...payload, user_id: session.user.id })
     if (!result.error && advancedReady && draft.recurring) {
-      const recurringResult = await supabase.from('recurring_transactions').insert({ user_id: session.user.id, type: draft.type, description: draft.description, amount: draft.amount, category: draft.category, account_id: draft.account_id || null, day_of_month: Number(draft.date.slice(-2)), start_date: draft.date, last_generated_month: `${draft.date.slice(0, 7)}-01` })
-      if (recurringResult.error) await dialog.alert('O lançamento foi salvo, mas não foi possível criar a recorrência.', { title: 'Recorrência não criada' })
-      else window.dispatchEvent(new Event('recurring-data-changed'))
+      const recurringPayload = { user_id: session.user.id, type: draft.type, description: draft.description, amount: draft.amount, category: draft.category, account_id: draft.account_id || null, day_of_month: Number(draft.date.slice(-2)), start_date: draft.date, last_generated_month: `${draft.date.slice(0, 7)}-01`, active: true }
+      let existingQuery = supabase.from('recurring_transactions').select('id').eq('type', draft.type).eq('description', draft.description).eq('amount', draft.amount).eq('category', draft.category).eq('day_of_month', recurringPayload.day_of_month).limit(1)
+      existingQuery = draft.account_id ? existingQuery.eq('account_id', draft.account_id) : existingQuery.is('account_id', null)
+      const { data: existingRecurring, error: recurringLookupError } = await existingQuery.maybeSingle()
+      if (recurringLookupError) await dialog.alert('O lançamento foi salvo, mas não foi possível verificar a recorrência.', { title: 'Recorrência não verificada' })
+      else {
+        const recurringResult = existingRecurring ? await supabase.from('recurring_transactions').update(recurringPayload).eq('id', existingRecurring.id) : await supabase.from('recurring_transactions').insert(recurringPayload)
+        if (recurringResult.error) await dialog.alert('O lançamento foi salvo, mas não foi possível criar a recorrência.', { title: 'Recorrência não criada' })
+        else window.dispatchEvent(new Event('recurring-data-changed'))
+      }
     }
-    if (!result.error) { setModal(null); load() }
+    if (result.error) return dialog.alert(result.error.message, { title: 'Lançamento não salvo' })
+    setModal(null)
+    load()
   }
   const remove = async (item) => {
     let recurringQuery = supabase.from('recurring_transactions').select('id').eq('type', item.type).eq('description', item.description).eq('amount', item.amount).eq('category', item.category).eq('day_of_month', Number(item.date.slice(-2)))
     recurringQuery = item.account_id ? recurringQuery.eq('account_id', item.account_id) : recurringQuery.is('account_id', null)
-    const { data: recurringMatches } = await recurringQuery
+    const { data: recurringMatches, error: recurringLookupError } = await recurringQuery
+    if (recurringLookupError) return dialog.alert('Não foi possível verificar se este lançamento possui recorrência. Tente novamente.', { title: 'Exclusão não realizada' })
     const removesSeries = Boolean(recurringMatches?.length)
     const message = removesSeries ? 'Esta movimentação e sua repetição mensal serão excluídas. Os lançamentos de outros meses serão mantidos.' : 'Esta movimentação será removida do seu histórico e não poderá ser recuperada.'
     if (!await dialog.confirm(message, { title: removesSeries ? 'Excluir lançamento e recorrência?' : 'Excluir este lançamento?' })) return
@@ -275,9 +338,23 @@ function Dashboard({ session }) {
     if (removesSeries) window.dispatchEvent(new Event('recurring-data-changed'))
     load()
   }
-  const saveBudgets = async (draft) => { const rows = Object.entries(draft).filter(([, amount]) => Number(amount) > 0).map(([category, amount]) => ({ user_id: session.user.id, month: `${month}-01`, category, amount: Number(amount) })); const oldRows = budgets.map((budget) => budget.id); if (oldRows.length) await supabase.from('budgets').delete().in('id', oldRows); if (rows.length) await supabase.from('budgets').insert(rows); load() }
-  if (view === 'guide') return <main className="app-shell"><header><span className="logo">saldo<span>claro</span></span><div className="user"><span>{session.user.email}</span><button className="link" onClick={() => supabase.auth.signOut()}>Sair</button></div></header><UsageGuide /></main>
-  return <main className="app-shell"><header><span className="logo">saldo<span>claro</span></span><div className="user"><span>{session.user.email}</span><button className="link" onClick={() => supabase.auth.signOut()}>Sair</button></div></header><section className="hero"><div><p className="eyebrow">PAINEL FINANCEIRO</p><h1>Seu dinheiro, mais claro.</h1><p>Acompanhe seus movimentos, seus limites e o ritmo das suas finanças.</p></div><button className="add" onClick={() => setModal({})}>+ Novo lançamento</button></section><nav className="month-nav"><button onClick={() => setMonth(changeMonth(month, -1))} aria-label="Mês anterior">&larr;</button><strong>{monthLabel.format(new Date(`${month}-01T12:00:00`))}</strong><button onClick={() => setMonth(changeMonth(month, 1))} aria-label="Próximo mês">&rarr;</button></nav><section className="cards"><article className="balance"><p>Saldo do mês</p><strong>{money.format(incomes - expenses)}</strong><span>{incomes >= expenses ? 'Você está no positivo' : 'Atenção aos gastos deste mês'}</span></article><article><p>Entradas</p><strong className="income">{money.format(incomes)}</strong><span>Receitas registradas</span></article><article><p>Saídas</p><strong className="expense">{money.format(expenses)}</strong><span>{expenseChange === null ? 'Primeiro mês com dados' : `${expenseChange > 0 ? '+' : ''}${expenseChange}% em relação ao mês anterior`}</span></article></section><section className="insights"><div><span className="insight-mark">{expenses > incomes ? '!' : '+'}</span><p><b>{expenses > incomes ? 'Os gastos superaram as entradas.' : 'Seu mês está equilibrado.'}</b>{grouped.length ? ` Sua maior categoria foi ${categoryLabel(grouped.sort((a, b) => b.amount - a.amount)[0].category)}, com ${money.format(grouped.sort((a, b) => b.amount - a.amount)[0].amount)}.` : ' Adicione lançamentos para receber insights.'}</p></div></section><section className="analytics-grid"><FlowChart entries={allEntries} /><article className="panel spending"><p className="eyebrow">POR CATEGORIA</p><h2>Onde você mais gasta</h2>{grouped.length === 0 ? <p className="empty">Seus gastos por categoria aparecerão aqui.</p> : grouped.map((item) => <div className="bar-row" key={item.category}><div><span>{categoryLabel(item.category)}</span><b>{money.format(item.amount)}</b></div><i><em style={{ width: `${(item.amount / largest) * 100}%` }} /></i></div>)}</article></section><section className="lower-grid"><article className="panel transactions"><div className="panel-head"><div><p className="eyebrow">LANÇAMENTOS</p><h2>Movimentações do mês</h2></div><span>{filtered.length} itens</span></div><div className="filters"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar descrição ou categoria" /><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="all">Todos os tipos</option><option value="income">Entradas</option><option value="expense">Saídas</option><option value="neutral">Neutros</option></select></div>{loading ? <p className="empty">Carregando...</p> : filtered.length === 0 ? <p className="empty">Nenhum lançamento corresponde aos filtros.</p> : <div className="entries">{filtered.map((item) => <TransactionEntry item={item} key={item.id} onEdit={setModal} onRemove={remove} />)}</div>}</article><BudgetPanel month={month} budgets={budgets} expensesByCategory={expensesByCategory} onSave={saveBudgets} ready={budgetReady} /></section>{modal && <TransactionModal entry={modal.id ? modal : null} onClose={() => setModal(null)} onSave={saveTransaction} />}</main>
+  const saveBudgets = async (draft) => {
+    const rows = Object.entries(draft).filter(([, amount]) => Number(amount) > 0).map(([category, amount]) => ({ user_id: session.user.id, month: `${month}-01`, category, amount: Number(amount) }))
+    if (rows.length) {
+      const { error } = await supabase.from('budgets').upsert(rows, { onConflict: 'user_id,month,category' })
+      if (error) { await dialog.alert(error.message, { title: 'Orçamentos não salvos' }); return false }
+    }
+    const activeCategories = new Set(rows.map((row) => row.category))
+    const removedIds = budgets.filter((budget) => !activeCategories.has(budget.category)).map((budget) => budget.id)
+    if (removedIds.length) {
+      const { error } = await supabase.from('budgets').delete().in('id', removedIds)
+      if (error) { await dialog.alert(error.message, { title: 'Orçamentos não atualizados' }); return false }
+    }
+    await load()
+    return true
+  }
+  if (view === 'guide') return <main className="app-shell"><AppHeader email={session.user.email} view={view} onViewChange={setView} /><UsageGuide /></main>
+  return <main className="app-shell"><AppHeader email={session.user.email} view={view} onViewChange={setView} /><section className="hero"><div><p className="eyebrow">PAINEL FINANCEIRO</p><h1>Seu dinheiro, mais claro.</h1><p>Acompanhe seus movimentos, seus limites e o ritmo das suas finanças.</p></div><button className="add" onClick={() => setModal({})}>+ Novo lançamento</button></section><MonthNavigator month={month} onChange={setMonth} />{loadError && <div className="data-error" role="alert"><span>{loadError}</span><button onClick={load}>Tentar novamente</button></div>}<section className="cards"><article className="balance"><p>Saldo do mês</p><strong>{money.format(incomes - expenses)}</strong><span>{incomes >= expenses ? 'Você está no positivo' : 'Atenção aos gastos deste mês'}</span></article><article><p>Entradas</p><strong className="income">{money.format(incomes)}</strong><span>Receitas registradas</span></article><article><p>Saídas</p><strong className="expense">{money.format(expenses)}</strong><span>{expenseChange === null ? 'Primeiro mês com dados' : `${expenseChange > 0 ? '+' : ''}${expenseChange}% em relação ao mês anterior`}</span></article></section><FinancialPulse month={month} incomes={incomes} expenses={expenses} budgets={budgets} expensesByCategory={expensesByCategory} /><section className="insights"><div><span className="insight-mark">{expenses > incomes ? '!' : '+'}</span><p><b>{expenses > incomes ? 'Os gastos superaram as entradas.' : 'Seu mês está equilibrado.'}</b>{grouped.length ? ` Sua maior categoria foi ${categoryLabel(grouped.sort((a, b) => b.amount - a.amount)[0].category)}, com ${money.format(grouped.sort((a, b) => b.amount - a.amount)[0].amount)}.` : ' Adicione lançamentos para receber insights.'}</p></div></section><section className="analytics-grid"><FlowChart entries={allEntries} /><article className="panel spending"><p className="eyebrow">POR CATEGORIA</p><h2>Onde você mais gasta</h2>{grouped.length === 0 ? <p className="empty">Seus gastos por categoria aparecerão aqui.</p> : grouped.map((item) => <div className="bar-row" key={item.category}><div><span>{categoryLabel(item.category)}</span><b>{money.format(item.amount)}</b></div><i><em style={{ width: `${(item.amount / largest) * 100}%` }} /></i></div>)}</article></section><section className="lower-grid"><article className="panel transactions"><div className="panel-head"><div><p className="eyebrow">LANÇAMENTOS</p><h2>Movimentações do mês</h2></div><span>{filtered.length} itens</span></div><div className="filters"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar descrição ou categoria" aria-label="Buscar movimentações" /><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} aria-label="Filtrar por tipo"><option value="all">Todos os tipos</option><option value="income">Entradas</option><option value="expense">Saídas</option><option value="neutral">Neutros</option></select>{filtersActive && <button className="clear-filters" type="button" onClick={() => { setSearch(''); setTypeFilter('all') }}>Limpar</button>}</div>{filtersActive && <div className="filter-summary"><span>{filtered.length} resultado{filtered.length === 1 ? '' : 's'}</span><b>Saldo filtrado: {money.format(filteredBalance)}</b></div>}{loading ? <p className="empty">Carregando...</p> : filtered.length === 0 ? <p className="empty">Nenhum lançamento corresponde aos filtros.</p> : <div className="entries">{filtered.map((item) => <TransactionEntry item={item} key={item.id} onEdit={setModal} onRemove={remove} />)}</div>}</article><BudgetPanel month={month} budgets={budgets} expensesByCategory={expensesByCategory} onSave={saveBudgets} ready={budgetReady} /></section>{modal && <TransactionModal entry={modal.id ? modal : null} onClose={() => setModal(null)} onSave={saveTransaction} />}</main>
 }
 
 function LoadingScreen() {
