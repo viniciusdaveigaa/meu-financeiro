@@ -34,11 +34,12 @@ import { useCategories } from '../context/CategoryContext'
 import { useAppDialog } from './Dialog'
 import { BankLogoBadge, CategoryIcon, Money } from './ui'
 
-export function AdvancedPanel({ month }) {
+export function AdvancedPanel({ month, userId }) {
   const dialog = useAppDialog()
   const { categories, getMeta } = useCategories()
   const [accounts, setAccounts] = useState([])
   const [recurring, setRecurring] = useState([])
+  const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
   const [kind, setKind] = useState('account')
   const [logo, setLogo] = useState('')
@@ -51,30 +52,33 @@ export function AdvancedPanel({ month }) {
   const generatingRef = useRef(false)
 
   const load = async () => {
-    const { data: authData } = await supabase.auth.getUser()
-    const userId = authData?.user?.id || 'default'
+    try {
+      const currentUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id || 'default'
 
-    const [accountResult, recurringResult] = await Promise.all([
-      supabase.from('accounts').select('*').order('created_at'),
-      supabase
-        .from('recurring_transactions')
-        .select('*')
-        .order('created_at', { ascending: false })
-    ])
+      const [accountResult, recurringResult] = await Promise.all([
+        supabase.from('accounts').select('*').order('created_at'),
+        supabase
+          .from('recurring_transactions')
+          .select('*')
+          .order('created_at', { ascending: false })
+      ])
 
-    if (accountResult.error || recurringResult.error) {
-      setReady(false)
-      return
+      if (accountResult.error || recurringResult.error) {
+        setReady(false)
+        return
+      }
+
+      setReady(true)
+      const localLogos = getSavedAccountLogos(currentUserId)
+      const accountsWithLogos = (accountResult.data || []).map((acc) => ({
+        ...acc,
+        logo: acc.logo || localLogos[acc.id] || resolveBankLogo('', acc.name, acc.kind).id
+      }))
+      setAccounts(accountsWithLogos)
+      setRecurring(recurringResult.data || [])
+    } finally {
+      setLoading(false)
     }
-
-    setReady(true)
-    const localLogos = getSavedAccountLogos(userId)
-    const accountsWithLogos = (accountResult.data || []).map((acc) => ({
-      ...acc,
-      logo: acc.logo || localLogos[acc.id] || resolveBankLogo('', acc.name, acc.kind).id
-    }))
-    setAccounts(accountsWithLogos)
-    setRecurring(recurringResult.data || [])
   }
 
   useEffect(() => {
@@ -91,7 +95,7 @@ export function AdvancedPanel({ month }) {
     }
   }, [])
 
-  // Auto-generate recurring transactions up to current selected month
+  // Auto-generate recurring transactions up to current selected month (em lote rápido)
   useEffect(() => {
     const run = async () => {
       const targetMonth = `${month}-01`
@@ -108,15 +112,17 @@ export function AdvancedPanel({ month }) {
       let generationFailed = false
 
       try {
+        const allRows = []
+        const itemIdsToUpdate = []
+
         for (const item of due) {
           const lastMonth = (
             item.last_generated_month || `${item.start_date.slice(0, 7)}-01`
           ).slice(0, 7)
-          const rows = []
           let cursor = changeMonth(lastMonth, 1)
 
           while (cursor <= month) {
-            rows.push({
+            allRows.push({
               user_id: item.user_id,
               account_id: item.account_id,
               type: item.type,
@@ -127,18 +133,21 @@ export function AdvancedPanel({ month }) {
             })
             cursor = changeMonth(cursor, 1)
           }
+          itemIdsToUpdate.push(item.id)
+        }
 
-          if (!rows.length) continue
-
-          const { error } = await supabase.from('transactions').insert(rows)
-          if (!error) {
-            const { error: updateError } = await supabase
-              .from('recurring_transactions')
-              .update({ last_generated_month: targetMonth })
-              .eq('id', item.id)
-
-            generated = generated || !updateError
-            generationFailed = generationFailed || Boolean(updateError)
+        if (allRows.length > 0) {
+          const { error: insertErr } = await supabase.from('transactions').insert(allRows)
+          if (!insertErr) {
+            await Promise.all(
+              itemIdsToUpdate.map((id) =>
+                supabase
+                  .from('recurring_transactions')
+                  .update({ last_generated_month: targetMonth })
+                  .eq('id', id)
+              )
+            )
+            generated = true
           } else {
             generationFailed = true
           }
@@ -167,14 +176,13 @@ export function AdvancedPanel({ month }) {
     if (!name.trim()) return
 
     setAddingAccount(true)
-    const { data: authData } = await supabase.auth.getUser()
-    const userId = authData?.user?.id || 'default'
+    const currentUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id || 'default'
     const cleanName = name.trim()
 
     const payload = {
       name: cleanName,
       kind,
-      user_id: userId
+      user_id: currentUserId
     }
 
     let insertRes = await supabase
@@ -194,7 +202,7 @@ export function AdvancedPanel({ month }) {
     const created = insertRes.data?.[0]
     const chosenLogo = logo || resolveBankLogo('', cleanName, kind).id
     if (created?.id) {
-      saveAccountLogo(userId, created.id, chosenLogo)
+      saveAccountLogo(currentUserId, created.id, chosenLogo)
     }
 
     setName('')
@@ -209,8 +217,7 @@ export function AdvancedPanel({ month }) {
     if (!editingAccount || !editingAccount.name.trim()) return
 
     setSavingEdit(true)
-    const { data: authData } = await supabase.auth.getUser()
-    const userId = authData?.user?.id || 'default'
+    const currentUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id || 'default'
     const cleanName = editingAccount.name.trim()
 
     let updateRes = await supabase
@@ -238,7 +245,7 @@ export function AdvancedPanel({ month }) {
     }
 
     const chosenLogo = editingAccount.logo || resolveBankLogo('', cleanName, editingAccount.kind).id
-    saveAccountLogo(userId, editingAccount.id, chosenLogo)
+    saveAccountLogo(currentUserId, editingAccount.id, chosenLogo)
 
     setEditingAccount(null)
     window.dispatchEvent(new Event('finance-data-changed'))
@@ -253,30 +260,37 @@ export function AdvancedPanel({ month }) {
     )
     if (!confirmed) return
 
-    const { data: authData } = await supabase.auth.getUser()
-    const userId = authData?.user?.id || 'default'
+    const currentUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id || 'default'
+
+    // Otimista: remove da tela instantaneamente
+    setAccounts((prev) => prev.filter((a) => a.id !== id))
 
     const { error } = await supabase.from('accounts').delete().eq('id', id)
     if (error) {
+      load() // reverte se falhar
       return dialog.alert(error.message, { title: 'Conta não excluída' })
     }
 
-    removeAccountLogo(userId, id)
+    removeAccountLogo(currentUserId, id)
     window.dispatchEvent(new Event('finance-data-changed'))
     window.dispatchEvent(new Event('account-logos-changed'))
-    load()
   }
 
   const toggleRecurring = async (item) => {
+    // Otimista: atualiza o switch imediatamente
+    setRecurring((prev) =>
+      prev.map((r) => (r.id === item.id ? { ...r, active: !r.active } : r))
+    )
+
     const { error } = await supabase
       .from('recurring_transactions')
       .update({ active: !item.active })
       .eq('id', item.id)
 
     if (error) {
+      load() // reverte
       return dialog.alert(error.message, { title: 'Falha ao atualizar recorrência' })
     }
-    load()
   }
 
   const saveRecurringAdjustment = async (updatedDraft) => {
@@ -318,15 +332,18 @@ export function AdvancedPanel({ month }) {
     )
     if (!confirmed) return
 
+    // Otimista: remove da tela instantaneamente
+    setRecurring((prev) => prev.filter((r) => r.id !== item.id))
+
     const { error } = await supabase
       .from('recurring_transactions')
       .delete()
       .eq('id', item.id)
 
     if (error) {
+      load() // reverte
       return dialog.alert(error.message, { title: 'Recorrência não excluída' })
     }
-    await load()
   }
 
   if (!ready) {
@@ -463,7 +480,10 @@ export function AdvancedPanel({ month }) {
               )
             })}
 
-            {accounts.length === 0 && (
+            {loading && accounts.length === 0 && (
+              <p className="text-empty-hint">Carregando contas...</p>
+            )}
+            {!loading && accounts.length === 0 && (
               <p className="text-empty-hint">Nenhuma conta ou cartão cadastrado.</p>
             )}
           </div>
@@ -570,7 +590,10 @@ export function AdvancedPanel({ month }) {
               )
             })}
 
-            {recurring.length === 0 && (
+            {loading && recurring.length === 0 && (
+              <p className="text-empty-hint">Carregando recorrências...</p>
+            )}
+            {!loading && recurring.length === 0 && (
               <p className="text-empty-hint">
                 Nenhum lançamento recorrente ativo. Ao cadastrar um salário ou conta fixa, marque "Repetir todo mês".
               </p>

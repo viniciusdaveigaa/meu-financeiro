@@ -45,7 +45,17 @@ function MainDashboard({ session }) {
   // App tabs: 'dashboard' | 'transactions' | 'planning' | 'guide'
   const [activeTab, setActiveTab] = useState('dashboard')
   const [planningSubTab, setPlanningSubTab] = useState('budgets') // 'budgets' | 'savings' | 'accounts' | 'categories'
+  const [visitedPlanningTabs, setVisitedPlanningTabs] = useState(() => new Set(['budgets']))
   const [month, setMonth] = useState(getMonthKey(new Date()))
+
+  useEffect(() => {
+    setVisitedPlanningTabs((prev) => {
+      if (prev.has(planningSubTab)) return prev
+      const next = new Set(prev)
+      next.add(planningSubTab)
+      return next
+    })
+  }, [planningSubTab])
 
   // Data states
   const [entries, setEntries] = useState([])
@@ -649,26 +659,34 @@ function MainDashboard({ session }) {
                 </div>
 
                 <div className="planning-subtab-content">
-                  {planningSubTab === 'budgets' && (
-                    <BudgetPanel
-                      month={month}
-                      budgets={budgets}
-                      expensesByCategory={expensesByCategory}
-                      onSave={saveBudgets}
-                      ready={budgetReady}
-                    />
+                  {visitedPlanningTabs.has('budgets') && (
+                    <div style={{ display: planningSubTab === 'budgets' ? 'block' : 'none' }}>
+                      <BudgetPanel
+                        month={month}
+                        budgets={budgets}
+                        expensesByCategory={expensesByCategory}
+                        onSave={saveBudgets}
+                        ready={budgetReady}
+                      />
+                    </div>
                   )}
 
-                  {planningSubTab === 'savings' && (
-                    <SavingsPanel />
+                  {visitedPlanningTabs.has('savings') && (
+                    <div style={{ display: planningSubTab === 'savings' ? 'block' : 'none' }}>
+                      <SavingsPanel userId={session?.user?.id} />
+                    </div>
                   )}
 
-                  {planningSubTab === 'accounts' && (
-                    <AdvancedPanel month={month} />
+                  {visitedPlanningTabs.has('accounts') && (
+                    <div style={{ display: planningSubTab === 'accounts' ? 'block' : 'none' }}>
+                      <AdvancedPanel month={month} userId={session?.user?.id} />
+                    </div>
                   )}
 
-                  {planningSubTab === 'categories' && (
-                    <CategoryManager />
+                  {visitedPlanningTabs.has('categories') && (
+                    <div style={{ display: planningSubTab === 'categories' ? 'block' : 'none' }}>
+                      <CategoryManager />
+                    </div>
                   )}
                 </div>
               </section>

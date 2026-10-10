@@ -18,10 +18,11 @@ import {
 import { useAppDialog } from './Dialog'
 import { Money } from './ui'
 
-export function SavingsPanel() {
+export function SavingsPanel({ userId }) {
   const dialog = useAppDialog()
   const [boxes, setBoxes] = useState([])
   const [contributions, setContributions] = useState([])
+  const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
   const [target, setTarget] = useState('')
   const [amounts, setAmounts] = useState({})
@@ -31,19 +32,23 @@ export function SavingsPanel() {
   const [openNew, setOpenNew] = useState(false)
 
   const load = async () => {
-    const [boxResult, contributionResult] = await Promise.all([
-      supabase.from('savings_boxes').select('*').order('created_at'),
-      supabase.from('savings_contributions').select('*')
-    ])
+    try {
+      const [boxResult, contributionResult] = await Promise.all([
+        supabase.from('savings_boxes').select('id, name, target_amount, created_at').order('created_at'),
+        supabase.from('savings_contributions').select('box_id, amount')
+      ])
 
-    if (boxResult.error || contributionResult.error) {
-      setReady(false)
-      return
+      if (boxResult.error || contributionResult.error) {
+        setReady(false)
+        return
+      }
+
+      setReady(true)
+      setBoxes(boxResult.data || [])
+      setContributions(contributionResult.data || [])
+    } finally {
+      setLoading(false)
     }
-
-    setReady(true)
-    setBoxes(boxResult.data || [])
-    setContributions(contributionResult.data || [])
   }
 
   useEffect(() => {
@@ -55,9 +60,9 @@ export function SavingsPanel() {
     if (!name.trim()) return
 
     setCreating(true)
-    const { data } = await supabase.auth.getUser()
+    const effectiveUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id
     const { error } = await supabase.from('savings_boxes').insert({
-      user_id: data.user.id,
+      user_id: effectiveUserId,
       name: name.trim(),
       target_amount: target ? Number(target) : null
     })
@@ -81,6 +86,10 @@ export function SavingsPanel() {
       })
     }
 
+    // Otimista: atualiza o saldo local instantaneamente
+    setContributions((prev) => [...prev, { box_id: box.id, amount }])
+    setAmounts({ ...amounts, [box.id]: '' })
+
     const { error } = await supabase.rpc('add_savings_contribution_v2', {
       p_box_id: box.id,
       p_amount: amount,
@@ -89,11 +98,10 @@ export function SavingsPanel() {
     })
 
     if (error) {
+      load() // reverte se houver erro
       return dialog.alert(error.message, { title: 'Falha no aporte' })
     }
 
-    setAmounts({ ...amounts, [box.id]: '' })
-    await load()
     window.dispatchEvent(new Event('finance-data-changed'))
   }
 
@@ -104,21 +112,25 @@ export function SavingsPanel() {
     )
     if (!confirmed) return
 
-    // 1. Exclui os lançamentos associados desta caixinha no extrato financeiro
-    await supabase
-      .from('transactions')
-      .delete()
-      .eq('category', 'Caixinha')
-      .or(`description.eq.Reserva: ${boxName},description.ilike.Reserva: ${boxName}%`)
+    // Otimista: remove da tela imediatamente
+    setBoxes((prev) => prev.filter((b) => b.id !== id))
+    setContributions((prev) => prev.filter((c) => c.box_id !== id))
 
-    // 2. Exclui a caixinha (o banco faz cascade automático em savings_contributions)
-    const { error } = await supabase.from('savings_boxes').delete().eq('id', id)
-    if (error) {
-      return dialog.alert(error.message, { title: 'Falha ao excluir caixinha' })
+    // 1 e 2. Exclui os lançamentos no extrato e a caixinha em paralelo
+    const [txDel, boxDel] = await Promise.all([
+      supabase
+        .from('transactions')
+        .delete()
+        .eq('category', 'Caixinha')
+        .or(`description.eq.Reserva: ${boxName},description.ilike.Reserva: ${boxName}%`),
+      supabase.from('savings_boxes').delete().eq('id', id)
+    ])
+
+    if (boxDel.error) {
+      load() // reverte se falhar
+      return dialog.alert(boxDel.error.message, { title: 'Falha ao excluir caixinha' })
     }
 
-    // 3. Atualiza dados locais e notifica todo o app para recalcular saldo e extrato
-    await load()
     window.dispatchEvent(new Event('finance-data-changed'))
   }
 
@@ -223,7 +235,11 @@ export function SavingsPanel() {
         </form>
       )}
 
-      {boxes.length === 0 ? (
+      {loading ? (
+        <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+          Carregando caixinhas...
+        </div>
+      ) : boxes.length === 0 ? (
         <div className="empty-state">
           <span className="empty-icon"><PiggyBank size={22} /></span>
           <h4>Nenhuma caixinha criada</h4>
