@@ -631,28 +631,15 @@ function RecurringAdjustModal({
       }}
     >
       <div className="modal-sheet recurring-adjust-sheet" role="dialog" aria-modal="true">
+        <span className="sheet-handle" aria-hidden="true" />
         <header className="modal-head">
-          <div className="tx-type-selector">
-            <button
-              type="button"
-              className={`type-pill expense ${type === 'expense' ? 'active' : ''}`}
-              onClick={() => setType('expense')}
-            >
-              <ArrowDownRight size={17} />
-              <span>Despesa</span>
-            </button>
-            <button
-              type="button"
-              className={`type-pill income ${type === 'income' ? 'active' : ''}`}
-              onClick={() => setType('income')}
-            >
-              <ArrowUpRight size={17} />
-              <span>Receita</span>
-            </button>
+          <div>
+            <span className="eyebrow">Recorrência Mensal</span>
+            <h2>Ajustar Lançamento</h2>
           </div>
           <button
             type="button"
-            className="icon-btn-close"
+            className="icon-btn"
             onClick={onClose}
             aria-label="Fechar"
             disabled={saving}
@@ -661,9 +648,50 @@ function RecurringAdjustModal({
           </button>
         </header>
 
-        <form onSubmit={handleSubmit} className="recurring-adjust-form">
-          <div className="input-field">
-            <label>Descrição do lançamento recorrente</label>
+        <form onSubmit={handleSubmit} className="modal-body recurring-adjust-form">
+          {/* Seletor de Tipo (Despesa / Receita) */}
+          <div className="type-switch" role="radiogroup" aria-label="Tipo">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={type === 'expense'}
+              className={`expense ${type === 'expense' ? 'active' : ''}`}
+              onClick={() => setType('expense')}
+            >
+              <ArrowDownRight size={17} /> Despesa
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={type === 'income'}
+              className={`income ${type === 'income' ? 'active' : ''}`}
+              onClick={() => setType('income')}
+            >
+              <ArrowUpRight size={17} /> Receita
+            </button>
+          </div>
+
+          {/* Campo de Valor em Destaque */}
+          <label className={`amount-field ${type}`}>
+            <span className="amount-caption">Valor mensal da recorrência</span>
+            <span className="amount-input">
+              <em>R$</em>
+              <input
+                type="text"
+                inputMode="numeric"
+                required
+                value={amount}
+                onChange={(e) => setAmount(formatAmountInput(e.target.value))}
+                placeholder="0,00"
+                disabled={saving}
+                autoFocus
+              />
+            </span>
+          </label>
+
+          {/* Descrição */}
+          <label className="field">
+            <span>Descrição</span>
             <input
               type="text"
               required
@@ -671,29 +699,13 @@ function RecurringAdjustModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Ex: Salário, Assinatura Netflix, Aluguel"
               disabled={saving}
-              autoFocus
             />
-          </div>
+          </label>
 
-          <div className="adjust-two-cols">
-            <div className="input-field">
-              <label>Valor (R$)</label>
-              <div className="input-currency-box">
-                <span className="currency-prefix">R$</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  required
-                  value={amount}
-                  onChange={(e) => setAmount(formatAmountInput(e.target.value))}
-                  placeholder="0,00"
-                  disabled={saving}
-                />
-              </div>
-            </div>
-
-            <div className="input-field">
-              <label>Dia do mês (1 a 31)</label>
+          {/* Linha dupla: Dia do Vencimento e Categoria */}
+          <div className="field-row">
+            <label className="field">
+              <span>Dia do mês (1 a 31)</span>
               <input
                 type="number"
                 min="1"
@@ -703,12 +715,10 @@ function RecurringAdjustModal({
                 onChange={(e) => setDayOfMonth(e.target.value)}
                 disabled={saving}
               />
-            </div>
-          </div>
+            </label>
 
-          <div className="adjust-two-cols">
-            <div className="input-field">
-              <label>Categoria</label>
+            <label className="field">
+              <span>Categoria</span>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
@@ -723,26 +733,27 @@ function RecurringAdjustModal({
                   )
                 })}
               </select>
-            </div>
-
-            <div className="input-field">
-              <label>Conta ou Cartão vinculado</label>
-              <select
-                value={accountId}
-                onChange={(e) => setAccountId(e.target.value)}
-                disabled={saving}
-              >
-                <option value="">Nenhuma / Não especificado</option>
-                {accounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>
-                    {acc.name} ({acc.kind === 'card' ? 'Cartão' : 'Conta'})
-                  </option>
-                ))}
-              </select>
-            </div>
+            </label>
           </div>
 
-          <div className="modal-foot">
+          {/* Conta ou Cartão */}
+          <label className="field">
+            <span>Conta ou Cartão vinculado</span>
+            <select
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value)}
+              disabled={saving}
+            >
+              <option value="">Nenhuma / Não especificado</option>
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.name} ({acc.kind === 'card' ? 'Cartão' : 'Conta'})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <footer className="modal-foot">
             <button
               type="button"
               className="btn btn-secondary"
@@ -751,6 +762,7 @@ function RecurringAdjustModal({
             >
               Cancelar
             </button>
+            <div className="spacer" />
             <button
               type="submit"
               className="btn btn-primary"
@@ -758,7 +770,7 @@ function RecurringAdjustModal({
             >
               <Check size={16} /> {saving ? 'Salvando...' : 'Salvar Ajustes'}
             </button>
-          </div>
+          </footer>
         </form>
       </div>
     </div>
