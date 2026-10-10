@@ -3726,52 +3726,169 @@ button, input, select, textarea {
 
   /* 5. Financial Pulse (Saúde Financeira) */
   .pulse-card {
-    padding: 16px;
-    gap: 14px;
+    display: flex;
+    flex-direction: column;
+    padding: 14px;
+    gap: 12px;
     border-radius: var(--radius-lg);
+    background: #ffffff;
+    border: 1px solid var(--border-light);
     margin-bottom: 14px;
+    overflow: hidden;
   }
   .pulse-score {
+    display: flex;
     flex-direction: row;
     align-items: center;
     gap: 14px;
-    padding-bottom: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);
+    border: 1px solid #dcfce7 !important;
+    border-bottom: 1px solid #dcfce7 !important;
+    border-right: none !important;
   }
   .pulse-ring {
-    width: 62px;
-    height: 62px;
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
   }
   .pulse-ring-center strong {
     font-size: 18px;
+    font-weight: 800;
+  }
+  .pulse-ring-center small {
+    font-size: 9px;
+  }
+  .pulse-score-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .pulse-score-info .eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--emerald-800);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin: 0;
+  }
+  .pulse-score-info .status-pill {
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    margin: 2px 0 3px;
   }
   .pulse-score-info p {
-    display: none;
+    display: block !important;
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--text-muted);
+    margin: 0;
   }
   .pulse-metrics {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
+    padding: 0;
+    margin: 0;
     background: transparent;
     border: none;
   }
   .pulse-metrics div {
     background: var(--bg-subtle);
     border: 1px solid var(--border-light) !important;
+    border-left: 1px solid var(--border-light) !important;
+    border-top: 1px solid var(--border-light) !important;
     border-radius: 10px;
-    padding: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
   }
   .pulse-metrics div span {
-    font-size: 10.5px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .pulse-metrics div strong {
-    font-size: 14px;
+    font-size: 14.5px;
+    font-weight: 800;
+    color: var(--emerald-950, #022c22);
+    margin: 1px 0;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.25;
+  }
+  .pulse-metrics div strong.neg {
+    color: #b91c1c;
   }
   .pulse-metrics div small {
     font-size: 10px;
+    line-height: 1.3;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .pulse-insights {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: none;
+    border-top: none;
+    list-style: none;
   }
   .pulse-insights li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
     font-size: 11.5px;
+    line-height: 1.35;
     padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    background: var(--bg-subtle);
+  }
+  .pulse-insights li svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .pulse-insights li.tone-bad {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+    font-weight: 600;
+  }
+  .pulse-insights li.tone-warn {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #92400e;
+  }
+  .pulse-insights li.tone-good {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+  }
+  .pulse-insights li.tone-neutral {
+    background: var(--bg-subtle);
+    border-color: var(--border-light);
+    color: var(--text-muted);
   }
 
   /* 6. Chart Controls & Summary */
