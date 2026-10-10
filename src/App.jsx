@@ -58,11 +58,11 @@ function MainDashboard({ session }) {
   const [loadError, setLoadError] = useState('')
   const [modal, setModal] = useState(null)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
-  const [userName, setUserName] = useState(() => session?.user?.user_metadata?.name || '')
+  const [userName, setUserName] = useState(() => session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || '')
 
   useEffect(() => {
     if (!session?.user?.id) return
-    const metaName = session.user.user_metadata?.name
+    const metaName = session.user.user_metadata?.full_name || session.user.user_metadata?.name
     if (metaName) setUserName(metaName)
 
     supabase
@@ -73,6 +73,11 @@ function MainDashboard({ session }) {
       .then(({ data }) => {
         if (data?.name) {
           setUserName(data.name)
+        } else if (metaName) {
+          supabase
+            .from('profiles')
+            .upsert({ id: session.user.id, name: metaName })
+            .catch(() => {})
         }
       })
   }, [session?.user?.id])
@@ -484,7 +489,7 @@ function MainDashboard({ session }) {
     return true
   }
 
-  const displayName = userName?.trim() || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'você'
+  const displayName = userName?.trim() || session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'você'
   const userFirstName = displayName.split(' ')[0]
 
   return (
