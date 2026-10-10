@@ -8,6 +8,7 @@ import {
   Lock,
   Mail,
   ShieldCheck,
+  User,
   Zap
 } from 'lucide-react'
 import { supabase } from '../supabase'
@@ -15,6 +16,7 @@ import { Logo } from './ui'
 
 export function Auth({ onSession }) {
   const [mode, setMode] = useState('login')
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -38,10 +40,33 @@ export function Auth({ onSession }) {
           onSession(data.session)
         }
       } else {
-        const { data, error } = await supabase.auth.signUp({ email, password })
+        const trimmedName = name.trim()
+        if (!trimmedName) {
+          setMessage('Por favor, informe seu nome para o cadastro.')
+          setSubmitting(false)
+          return
+        }
+
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: trimmedName
+            }
+          }
+        })
         if (error) {
           setMessage(error.message)
         } else if (data.session) {
+          try {
+            await supabase.from('profiles').upsert({
+              id: data.session.user.id,
+              name: trimmedName
+            })
+          } catch (e) {
+            console.warn('Erro ao salvar profile inicial:', e)
+          }
           onSession(data.session)
         } else {
           setMessage('Conta criada com sucesso! Confira sua caixa de entrada para confirmar o e-mail.')
@@ -115,6 +140,26 @@ export function Auth({ onSession }) {
             </div>
 
             <form onSubmit={submit} className="auth-form">
+              {mode === 'signup' && (
+                <div className="field">
+                  <span>Seu Nome</span>
+                  <div className="input-with-icon">
+                    <span className="field-icon"><User size={16} /></span>
+                    <input
+                      id="auth-name"
+                      type="text"
+                      autoComplete="name"
+                      placeholder="Como prefere ser chamado?"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      disabled={submitting}
+                      required
+                      maxLength={60}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="field">
                 <span>E-mail</span>
                 <div className="input-with-icon">

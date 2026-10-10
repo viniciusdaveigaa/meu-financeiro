@@ -19,6 +19,7 @@ import { SavingsPanel } from './components/SavingsPanel'
 import { AdvancedPanel } from './components/AdvancedPanel'
 import { CategoryManager } from './components/CategoryManager'
 import { UsageGuide } from './components/UsageGuide'
+import { SettingsModal } from './components/SettingsModal'
 import { MobileNav } from './components/MobileNav'
 import { Logo } from './components/ui'
 
@@ -56,6 +57,25 @@ function MainDashboard({ session }) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [modal, setModal] = useState(null)
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false)
+  const [userName, setUserName] = useState(() => session?.user?.user_metadata?.name || '')
+
+  useEffect(() => {
+    if (!session?.user?.id) return
+    const metaName = session.user.user_metadata?.name
+    if (metaName) setUserName(metaName)
+
+    supabase
+      .from('profiles')
+      .select('name')
+      .eq('id', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.name) {
+          setUserName(data.name)
+        }
+      })
+  }, [session?.user?.id])
 
   const loadSeqRef = useRef(0)
 
@@ -464,16 +484,19 @@ function MainDashboard({ session }) {
     return true
   }
 
-  const userFirstName = session.user.email?.split('@')[0] || 'você'
+  const displayName = userName?.trim() || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'você'
+  const userFirstName = displayName.split(' ')[0]
 
   return (
     <div className="app-shell-modern">
       {/* Topbar Header */}
       <Header
         email={session.user.email}
+        userName={displayName}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onNewTransaction={() => setModal({})}
+        onOpenSettings={() => setSettingsModalOpen(true)}
       />
 
       {/* Main Content Body */}
@@ -665,6 +688,21 @@ function MainDashboard({ session }) {
           onClose={() => setModal(null)}
           onSave={saveTransaction}
           onDelete={removeTransaction}
+        />
+      )}
+
+      {/* Settings / Profile Modal */}
+      {settingsModalOpen && (
+        <SettingsModal
+          currentName={userName?.trim() || session.user.user_metadata?.name || ''}
+          currentEmail={session.user.email}
+          userId={session.user.id}
+          onClose={() => setSettingsModalOpen(false)}
+          onProfileUpdated={({ name: newN }) => {
+            if (newN) {
+              setUserName(newN)
+            }
+          }}
         />
       )}
     </div>

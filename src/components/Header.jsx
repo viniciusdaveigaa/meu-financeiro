@@ -5,6 +5,7 @@ import {
   LogOut,
   Plus,
   ReceiptText,
+  Settings,
   Target
 } from 'lucide-react'
 import { supabase } from '../supabase'
@@ -12,12 +13,15 @@ import { Logo, PrivacyToggle } from './ui'
 
 export function Header({
   email,
+  userName = '',
   activeTab,
   onTabChange,
-  onNewTransaction
+  onNewTransaction,
+  onOpenSettings
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const initial = email ? email.charAt(0).toUpperCase() : 'U'
+  const initial = (userName?.trim() || email || 'U').charAt(0).toUpperCase()
+  const shortName = userName?.trim() ? userName.trim().split(' ')[0] : email
 
   return (
     <header className="app-topbar">
@@ -86,12 +90,12 @@ export function Header({
               type="button"
               className="user-avatar-btn"
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              title={email}
+              title={userName?.trim() ? `${userName} (${email})` : email}
               aria-label="Perfil do usuário"
               aria-expanded={userMenuOpen}
             >
               <span className="user-avatar">{initial}</span>
-              <span className="user-email-text">{email}</span>
+              <span className="user-email-text">{shortName}</span>
             </button>
 
             {userMenuOpen && (
@@ -100,9 +104,21 @@ export function Header({
                 <div className="user-dropdown-card">
                   <div className="user-dropdown-header">
                     <span className="user-name-title">Conta Conectada</span>
-                    <strong className="user-email-full">{email}</strong>
+                    <strong className="user-name-display">{userName?.trim() || 'Usuário'}</strong>
+                    <span className="user-email-full">{email}</span>
                   </div>
                   <hr className="dropdown-divider" />
+                  <button
+                    type="button"
+                    className="dropdown-item"
+                    onClick={() => {
+                      setUserMenuOpen(false)
+                      onOpenSettings?.()
+                    }}
+                  >
+                    <Settings size={16} />
+                    <span>Configurações da Conta</span>
+                  </button>
                   <button
                     type="button"
                     className="dropdown-item"
