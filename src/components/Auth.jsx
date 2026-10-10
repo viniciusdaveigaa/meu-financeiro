@@ -12,6 +12,7 @@ import {
   Zap
 } from 'lucide-react'
 import { supabase } from '../supabase'
+import { validatePasswordStrength } from '../utils/formatters'
 import { Logo } from './ui'
 
 export function Auth({ onSession }) {
@@ -67,6 +68,13 @@ export function Auth({ onSession }) {
           return
         }
 
+        const pwdErr = validatePasswordStrength(password)
+        if (pwdErr) {
+          setMessage(pwdErr)
+          setSubmitting(false)
+          return
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -77,7 +85,15 @@ export function Auth({ onSession }) {
           }
         })
         if (error) {
-          setMessage(error.message)
+          if (
+            error.message.toLowerCase().includes('password') ||
+            error.message.toLowerCase().includes('least') ||
+            error.message.toLowerCase().includes('character')
+          ) {
+            setMessage('A senha deve ter no mínimo 9 caracteres e conter letra maiúscula, minúscula, número e símbolo.')
+          } else {
+            setMessage(error.message)
+          }
         } else if (data.session) {
           try {
             await supabase.from('profiles').upsert({
@@ -238,8 +254,8 @@ export function Auth({ onSession }) {
                     id="auth-password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                    placeholder="Mínimo de 6 caracteres"
-                    minLength={6}
+                    placeholder={mode === 'login' ? 'Digite sua senha' : 'Mínimo de 9 caracteres'}
+                    minLength={mode === 'login' ? 1 : 9}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={submitting}
@@ -256,6 +272,11 @@ export function Auth({ onSession }) {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                {mode === 'signup' && (
+                  <small className="field-hint">
+                    Mínimo de 9 caracteres com letras maiúsculas, minúsculas, números e símbolos.
+                  </small>
+                )}
               </div>
 
               {message && (

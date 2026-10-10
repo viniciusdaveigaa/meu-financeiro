@@ -48,6 +48,26 @@ export function greeting(date = new Date()) {
   return 'Olá'
 }
 
+// Validação de força de senha (regra configurada no Supabase: 9+ chars, maiúscula, minúscula, número e símbolo)
+export function validatePasswordStrength(pwd) {
+  if (!pwd || pwd.length < 9) {
+    return 'A senha deve ter no mínimo 9 caracteres.'
+  }
+  if (!/[a-z]/.test(pwd)) {
+    return 'A senha deve conter pelo menos uma letra minúscula.'
+  }
+  if (!/[A-Z]/.test(pwd)) {
+    return 'A senha deve conter pelo menos uma letra maiúscula.'
+  }
+  if (!/[0-9]/.test(pwd)) {
+    return 'A senha deve conter pelo menos um número.'
+  }
+  if (!/[^a-zA-Z0-9]/.test(pwd)) {
+    return 'A senha deve conter pelo menos um símbolo especial (ex.: @, #, $, !).'
+  }
+  return null
+}
+
 /** Variação percentual arredondada, ou null quando não há base de comparação. */
 export function percentChange(current, previous) {
   if (!previous) return null

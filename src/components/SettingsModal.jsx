@@ -13,7 +13,7 @@ import {
   X
 } from 'lucide-react'
 import { supabase } from '../supabase'
-import { greeting } from '../utils/formatters'
+import { greeting, validatePasswordStrength } from '../utils/formatters'
 
 export function SettingsModal({
   currentName = '',
@@ -132,8 +132,9 @@ export function SettingsModal({
     setPasswordError('')
     setPasswordSuccess('')
 
-    if (newPassword.length < 6) {
-      setPasswordError('A nova senha deve ter no mínimo 6 caracteres.')
+    const pwdErr = validatePasswordStrength(newPassword)
+    if (pwdErr) {
+      setPasswordError(pwdErr)
       return
     }
     if (newPassword !== confirmPassword) {
@@ -147,7 +148,16 @@ export function SettingsModal({
         password: newPassword
       })
 
-      if (error) throw error
+      if (error) {
+        if (
+          error.message.toLowerCase().includes('password') ||
+          error.message.toLowerCase().includes('least') ||
+          error.message.toLowerCase().includes('character')
+        ) {
+          throw new Error('A nova senha deve ter no mínimo 9 caracteres e conter letra maiúscula, minúscula, número e símbolo.')
+        }
+        throw error
+      }
 
       setPasswordSuccess('Senha alterada com sucesso!')
       setNewPassword('')
@@ -366,7 +376,7 @@ export function SettingsModal({
             <form onSubmit={handleSavePassword} className="settings-form-pane">
               <div className="settings-info-box">
                 <p>
-                  Defina uma senha forte com no mínimo 6 caracteres para garantir a segurança da sua conta.
+                  Defina uma senha forte com no mínimo 9 caracteres, contendo letras maiúsculas, minúsculas, números e símbolos.
                 </p>
               </div>
 
@@ -393,8 +403,8 @@ export function SettingsModal({
                     id="settings-new-password"
                     type={showPassword ? 'text' : 'password'}
                     required
-                    placeholder="Mínimo 6 caracteres"
-                    minLength={6}
+                    placeholder="Mínimo 9 caracteres"
+                    minLength={9}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     disabled={passwordSaving}
@@ -410,6 +420,9 @@ export function SettingsModal({
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                <small className="field-hint">
+                  Mínimo de 9 caracteres com letras maiúsculas, minúsculas, números e símbolos.
+                </small>
               </div>
 
               <div className="field">
@@ -423,7 +436,7 @@ export function SettingsModal({
                     type={showPassword ? 'text' : 'password'}
                     required
                     placeholder="Repita a nova senha"
-                    minLength={6}
+                    minLength={9}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={passwordSaving}
