@@ -168,6 +168,7 @@ export function SettingsModal({
       }}
     >
       <div className="modal-sheet settings-modal-sheet" role="dialog" aria-modal="true">
+        <div className="sheet-handle" />
         <header className="modal-head">
           <div className="settings-head-title">
             <span className="settings-icon-badge">
@@ -195,15 +196,15 @@ export function SettingsModal({
             className={`settings-tab-btn ${activeTab === 'profile' ? 'active' : ''}`}
             onClick={() => setActiveTab('profile')}
           >
-            <User size={16} />
-            <span>Meu Perfil</span>
+            <User size={15} />
+            <span>Perfil</span>
           </button>
           <button
             type="button"
             className={`settings-tab-btn ${activeTab === 'email' ? 'active' : ''}`}
             onClick={() => setActiveTab('email')}
           >
-            <Mail size={16} />
+            <Mail size={15} />
             <span>E-mail</span>
           </button>
           <button
@@ -211,8 +212,8 @@ export function SettingsModal({
             className={`settings-tab-btn ${activeTab === 'password' ? 'active' : ''}`}
             onClick={() => setActiveTab('password')}
           >
-            <Lock size={16} />
-            <span>Segurança e Senha</span>
+            <Lock size={15} />
+            <span>Senha</span>
           </button>
         </div>
 
@@ -258,7 +259,6 @@ export function SettingsModal({
                     onChange={(e) => setName(e.target.value)}
                     maxLength={60}
                     disabled={nameSaving}
-                    autoFocus
                   />
                 </div>
               </div>
@@ -343,7 +343,6 @@ export function SettingsModal({
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     disabled={emailSaving}
-                    autoFocus
                   />
                 </div>
               </div>
@@ -398,7 +397,6 @@ export function SettingsModal({
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     disabled={passwordSaving}
-                    autoFocus
                   />
                   <button
                     type="button"
