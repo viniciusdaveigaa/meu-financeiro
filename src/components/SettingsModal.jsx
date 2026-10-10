@@ -186,16 +186,17 @@ export function SettingsModal({
             <span className="settings-icon-badge">
               <User size={20} />
             </span>
-            <div>
+            <div className="settings-head-text">
               <h3>Configurações da Conta</h3>
               <p>Gerencie seu nome de exibição, e-mail de acesso e credenciais de segurança.</p>
             </div>
           </div>
           <button
             type="button"
-            className="icon-btn-close"
+            className="icon-btn modal-close-btn"
             onClick={onClose}
             aria-label="Fechar configurações"
+            title="Fechar"
           >
             <X size={18} />
           </button>

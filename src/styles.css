@@ -540,6 +540,16 @@ button, input, select, textarea {
   padding: 6px 8px 10px;
 }
 
+.clickable-dropdown-header {
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: 8px;
+}
+
+.clickable-dropdown-header:hover {
+  background: rgba(16, 185, 129, 0.08);
+}
+
 .user-name-title {
   font-size: 10.5px;
   color: var(--text-subtle);
@@ -622,6 +632,22 @@ button, input, select, textarea {
 
 .user-highlight {
   color: var(--emerald-700);
+}
+
+.clickable-user-name {
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: underline;
+  text-decoration-color: rgba(16, 185, 129, 0.35);
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
+}
+
+.clickable-user-name:hover {
+  color: var(--emerald-600);
+  text-decoration-color: var(--emerald-500);
+  filter: drop-shadow(0 2px 8px rgba(16, 185, 129, 0.25));
 }
 
 .hero-subtext {
@@ -3165,10 +3191,20 @@ button, input, select, textarea {
   width: 100%;
 }
 
+.settings-modal-sheet .modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
 .settings-head-title {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .settings-icon-badge {
@@ -3183,17 +3219,49 @@ button, input, select, textarea {
   flex-shrink: 0;
 }
 
-.settings-head-title h3 {
+.settings-head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-head-text h3 {
   font-size: 17px;
   font-weight: 700;
   color: var(--emerald-900);
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.settings-head-title p {
+.settings-head-text p {
   font-size: 12px;
   color: var(--text-muted);
   margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modal-close-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light, #e2e8f0);
+  background: var(--bg-card, #fff);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modal-close-btn:hover {
+  background: rgba(16, 56, 47, 0.08);
+  color: var(--text-main);
+  border-color: rgba(16, 56, 47, 0.25);
 }
 
 .settings-nav-tabs {
@@ -3393,6 +3461,315 @@ button, input, select, textarea {
 
 .google-auth-link-btn:hover {
   background: #dbeafe;
+}
+
+/* =========================================================
+   SIGNOUT SCREEN ANIMATION
+   ========================================================= */
+.signout-screen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(8, 28, 21, 0.82);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: signoutFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.signout-card {
+  background: #ffffff;
+  border-radius: var(--radius-xl, 20px);
+  padding: 34px 30px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: signoutPop 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.signout-logo-wrap {
+  margin-bottom: 22px;
+  display: inline-flex;
+  padding: 10px 18px;
+  background: var(--bg-main, #0f2e24);
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(15, 46, 36, 0.25);
+}
+
+.signout-icon-pulse {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  animation: signoutPulse 1.4s infinite ease-in-out;
+}
+
+.signout-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--emerald-950, #06241b);
+  margin: 0 0 6px;
+}
+
+.signout-subtitle {
+  font-size: 13px;
+  color: var(--text-muted, #64748b);
+  margin: 0 0 22px;
+  line-height: 1.5;
+}
+
+.signout-progress-track {
+  width: 100%;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.signout-progress-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #10b981, #059669, #047857);
+  border-radius: 999px;
+  animation: signoutProgress 0.85s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes signoutFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes signoutPop {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes signoutPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.35); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+}
+
+@keyframes signoutProgress {
+  0% { width: 0%; }
+  60% { width: 75%; }
+  100% { width: 100%; }
+}
+
+/* =========================================================
+   PRIVACY & TERMS MODAL
+   ========================================================= */
+.privacy-modal-sheet {
+  max-width: 680px;
+  width: 100%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.privacy-modal-header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.privacy-head-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.privacy-icon-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--emerald-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.privacy-head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.privacy-head-text h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--emerald-950);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.privacy-head-text p {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.privacy-modal-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 60vh;
+}
+
+.privacy-hero-banner {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.04) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  border-radius: var(--radius-lg, 16px);
+  padding: 18px 20px;
+}
+
+.privacy-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--emerald-800);
+  margin-bottom: 10px;
+}
+
+.privacy-hero-banner h4 {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--emerald-950);
+  margin: 0 0 6px;
+}
+
+.privacy-hero-banner p {
+  font-size: 13px;
+  color: var(--text-main);
+  margin: 0;
+  line-height: 1.55;
+}
+
+.privacy-sections-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.privacy-section-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-light, #e2e8f0);
+  border-radius: 14px;
+  padding: 16px 18px;
+  transition: all 0.2s ease;
+}
+
+.privacy-section-card:hover {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: #fafcfb;
+}
+
+.privacy-sec-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: var(--emerald-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.privacy-sec-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.privacy-sec-content h5 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--emerald-950);
+  margin: 0 0 6px;
+}
+
+.privacy-sec-content p {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.privacy-sec-tag {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--emerald-700);
+  background: rgba(16, 185, 129, 0.1);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.privacy-bullet-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.privacy-bullet-list li {
+  margin-bottom: 4px;
+}
+
+.privacy-modal-foot {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.privacy-foot-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 /* =========================================================
@@ -4739,19 +5116,74 @@ button, input, select, textarea {
     margin-bottom: 12px;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
   }
   .settings-head-title {
     gap: 10px;
+    flex: 1;
+    min-width: 0;
   }
   .settings-icon-badge {
     width: 36px;
     height: 36px;
+    flex-shrink: 0;
   }
-  .settings-head-title h3 {
+  .settings-head-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .settings-head-text h3 {
     font-size: 16px;
   }
-  .settings-head-title p {
+  .settings-head-text p {
     display: none;
+  }
+  .settings-modal-sheet .modal-close-btn {
+    flex-shrink: 0;
+  }
+
+  /* Privacy Modal Mobile */
+  .privacy-modal-sheet {
+    max-height: 88vh;
+    padding: 16px 16px calc(24px + env(safe-area-inset-bottom, 16px));
+  }
+  .privacy-modal-header {
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+  }
+  .privacy-icon-badge {
+    width: 36px;
+    height: 36px;
+  }
+  .privacy-head-text h3 {
+    font-size: 16px;
+  }
+  .privacy-head-text p {
+    display: none;
+  }
+  .privacy-modal-body {
+    max-height: 58vh;
+    gap: 12px;
+  }
+  .privacy-modal-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .privacy-modal-foot button {
+    width: 100%;
+  }
+
+  /* Signout Mobile */
+  .signout-card {
+    padding: 28px 20px;
+    max-width: 340px;
+  }
+  .signout-title {
+    font-size: 18px;
   }
   .settings-nav-tabs {
     display: grid;

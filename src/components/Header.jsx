@@ -6,6 +6,7 @@ import {
   Plus,
   ReceiptText,
   Settings,
+  ShieldCheck,
   Target
 } from 'lucide-react'
 import { supabase } from '../supabase'
@@ -17,7 +18,9 @@ export function Header({
   activeTab,
   onTabChange,
   onNewTransaction,
-  onOpenSettings
+  onOpenSettings,
+  onOpenPrivacy,
+  onSignOut
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const initial = (userName?.trim() || email || 'U').charAt(0).toUpperCase()
@@ -102,7 +105,14 @@ export function Header({
               <>
                 <div className="menu-backdrop" onClick={() => setUserMenuOpen(false)} />
                 <div className="user-dropdown-card">
-                  <div className="user-dropdown-header">
+                  <div
+                    className="user-dropdown-header clickable-dropdown-header"
+                    onClick={() => {
+                      setUserMenuOpen(false)
+                      onOpenPrivacy?.()
+                    }}
+                    title="Ver Política de Privacidade e Termos de Uso"
+                  >
                     <span className="user-name-title">Conta Conectada</span>
                     <strong className="user-name-display">{userName?.trim() || 'Usuário'}</strong>
                     <span className="user-email-full">{email}</span>
@@ -124,6 +134,17 @@ export function Header({
                     className="dropdown-item"
                     onClick={() => {
                       setUserMenuOpen(false)
+                      onOpenPrivacy?.()
+                    }}
+                  >
+                    <ShieldCheck size={16} />
+                    <span>Privacidade & Termos</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="dropdown-item"
+                    onClick={() => {
+                      setUserMenuOpen(false)
                       onTabChange('guide')
                     }}
                   >
@@ -133,7 +154,14 @@ export function Header({
                   <button
                     type="button"
                     className="dropdown-item danger"
-                    onClick={() => supabase.auth.signOut()}
+                    onClick={() => {
+                      setUserMenuOpen(false)
+                      if (onSignOut) {
+                        onSignOut()
+                      } else {
+                        supabase.auth.signOut()
+                      }
+                    }}
                   >
                     <LogOut size={16} />
                     <span>Encerrar Sessão</span>

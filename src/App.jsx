@@ -20,6 +20,8 @@ import { AdvancedPanel } from './components/AdvancedPanel'
 import { CategoryManager } from './components/CategoryManager'
 import { UsageGuide } from './components/UsageGuide'
 import { SettingsModal } from './components/SettingsModal'
+import { PrivacyTermsModal } from './components/PrivacyTermsModal'
+import { SignOutScreen } from './components/SignOutScreen'
 import { MobileNav } from './components/MobileNav'
 import { Logo } from './components/ui'
 
@@ -38,7 +40,7 @@ function calculateTotal(items, type) {
     .reduce((sum, item) => sum + Number(item.amount), 0)
 }
 
-function MainDashboard({ session }) {
+function MainDashboard({ session, onSignOut }) {
   const dialog = useAppDialog()
   const { categories } = useCategories()
 
@@ -69,6 +71,7 @@ function MainDashboard({ session }) {
   const [loadError, setLoadError] = useState('')
   const [modal, setModal] = useState(null)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false)
   const [userName, setUserName] = useState(() => session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || '')
 
   const loadConfig = async () => {
@@ -542,6 +545,8 @@ function MainDashboard({ session }) {
         onTabChange={setActiveTab}
         onNewTransaction={() => setModal({})}
         onOpenSettings={() => setSettingsModalOpen(true)}
+        onOpenPrivacy={() => setPrivacyModalOpen(true)}
+        onSignOut={onSignOut}
       />
 
       {/* Main Content Body */}
@@ -554,18 +559,48 @@ function MainDashboard({ session }) {
             {/* Top Period Selector Bar */}
             <section className="dashboard-control-hero">
               <div className="hero-text-block">
-                <span className="hero-eyebrow">Painel Financeiro</span>
+                <span className="hero-eyebrow">
+                  {activeTab === 'planning'
+                    ? 'Planejamento Financeiro'
+                    : activeTab === 'transactions'
+                    ? 'Extrato Detalhado'
+                    : 'Painel Financeiro'}
+                </span>
                 <h1 className="hero-heading">
-                  {greeting()}, <span className="user-highlight">{userFirstName}</span>
+                  {activeTab === 'planning' ? (
+                    'Metas, Caixinhas e Orçamentos'
+                  ) : activeTab === 'transactions' ? (
+                    'Extrato de Transações'
+                  ) : (
+                    <>
+                      {greeting()},{' '}
+                      <span
+                        className="user-highlight clickable-user-name"
+                        onClick={() => setPrivacyModalOpen(true)}
+                        role="button"
+                        tabIndex={0}
+                        title="Clique para ver a Política de Privacidade e Termos de Uso"
+                      >
+                        {userFirstName}
+                      </span>
+                    </>
+                  )}
                 </h1>
                 <p className="hero-subtext">
-                  Resumo das suas receitas, despesas e metas em tempo real.
+                  {activeTab === 'planning'
+                    ? 'Defina limites de gastos, acompanhe metas de economia e organize suas contas fixas.'
+                    : activeTab === 'transactions'
+                    ? 'Consulte, filtre e gerencie todas as suas movimentações financeiras do mês.'
+                    : 'Resumo das suas receitas, despesas e metas em tempo real.'}
                 </p>
               </div>
 
-              <div className="hero-actions-block">
-                <MonthPicker month={month} onChange={setMonth} />
-              </div>
+              {/* Oculta o seletor de mês na aba de Planejamento */}
+              {activeTab !== 'planning' && (
+                <div className="hero-actions-block">
+                  <MonthPicker month={month} onChange={setMonth} />
+                </div>
+              )}
             </section>
 
             {/* Error Banner */}
@@ -768,6 +803,11 @@ function MainDashboard({ session }) {
           }}
         />
       )}
+
+      {/* Privacy & Terms Modal */}
+      {privacyModalOpen && (
+        <PrivacyTermsModal onClose={() => setPrivacyModalOpen(false)} />
+      )}
     </div>
   )
 }
@@ -793,7 +833,22 @@ function AppContent() {
   const [session, setSession] = useState(null)
   const [initialLoading, setInitialLoading] = useState(true)
   const [transitioning, setTransitioning] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const timerRef = useRef(null)
+
+  const handleSignOut = async () => {
+    setSigningOut(true)
+    setTimeout(async () => {
+      try {
+        await supabase.auth.signOut()
+      } catch (err) {
+        console.error('Erro ao encerrar sessão:', err)
+      } finally {
+        setSession(null)
+        setSigningOut(false)
+      }
+    }, 850)
+  }
 
   const beginSession = (next, showTransition = true) => {
     clearTimeout(timerRef.current)
@@ -851,12 +906,17 @@ function AppContent() {
 
   if (initialLoading || transitioning) return <LoadingScreen />
 
-  return session ? (
-    <CategoryProvider userId={session.user.id}>
-      <MainDashboard session={session} />
-    </CategoryProvider>
-  ) : (
-    <Auth onSession={beginSession} />
+  return (
+    <>
+      {signingOut && <SignOutScreen />}
+      {session ? (
+        <CategoryProvider userId={session.user.id}>
+          <MainDashboard session={session} onSignOut={handleSignOut} />
+        </CategoryProvider>
+      ) : (
+        <Auth onSession={beginSession} />
+      )}
+    </>
   )
 }
 
