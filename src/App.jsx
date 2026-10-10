@@ -720,6 +720,11 @@ function MainDashboard({ session }) {
           currentName={userName?.trim() || session.user.user_metadata?.name || ''}
           currentEmail={session.user.email}
           userId={session.user.id}
+          isGoogleUser={
+            session?.user?.app_metadata?.provider === 'google' ||
+            session?.user?.app_metadata?.providers?.includes('google') ||
+            session?.user?.identities?.some((i) => i.provider === 'google')
+          }
           onClose={() => setSettingsModalOpen(false)}
           onProfileUpdated={({ name: newN }) => {
             if (newN) {

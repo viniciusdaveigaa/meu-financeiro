@@ -24,3 +24,4 @@ on public.savings_contributions (box_id, amount);
 
 create index if not exists savings_contrib_user_idx 
 on public.savings_contributions (user_id);
+
