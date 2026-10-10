@@ -733,6 +733,7 @@ function LoadingScreen() {
 
 function AppContent() {
   const [session, setSession] = useState(null)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [transitioning, setTransitioning] = useState(false)
   const timerRef = useRef(null)
 
@@ -745,11 +746,29 @@ function AppContent() {
   }
 
   useEffect(() => {
-    if (!configured) return
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    if (!configured) {
+      setInitialLoading(false)
+      return
+    }
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (data?.session) {
+          setSession(data.session)
+        }
+      })
+      .finally(() => {
+        setInitialLoading(false)
+      })
+
     const { data: listener } = supabase.auth.onAuthStateChange((event, next) => {
-      if (event === 'SIGNED_OUT') beginSession(null, false)
-      if ((event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && next) {
+      if (event === 'SIGNED_OUT') {
+        beginSession(null, false)
+      } else if (event === 'SIGNED_IN' && next) {
+        setSession(next)
+        setInitialLoading(false)
+      } else if ((event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && next) {
         setSession(next)
       }
     })
@@ -772,7 +791,7 @@ function AppContent() {
     )
   }
 
-  if (transitioning) return <LoadingScreen />
+  if (initialLoading || transitioning) return <LoadingScreen />
 
   return session ? (
     <CategoryProvider userId={session.user.id}>
