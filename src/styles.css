@@ -1654,17 +1654,20 @@ button, input, select, textarea {
   text-align: left;
   cursor: pointer;
   padding: 0;
+  min-width: 0;
 }
 
 .tx-info {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .tx-title {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .tx-desc {
@@ -1674,6 +1677,7 @@ button, input, select, textarea {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .tx-badge {
@@ -1683,6 +1687,7 @@ button, input, select, textarea {
   color: #0369a1;
   padding: 1px 6px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .tx-meta {
@@ -1692,6 +1697,16 @@ button, input, select, textarea {
   font-size: 11.5px;
   color: var(--text-subtle);
   margin-top: 2px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tx-meta > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tx-account {
@@ -1701,12 +1716,20 @@ button, input, select, textarea {
   background: #f1f5f9;
   padding: 1px 6px;
   border-radius: 4px;
+  flex-shrink: 0;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tx-amount {
   font-size: 15px;
   font-weight: 800;
   white-space: nowrap;
+  margin-left: auto;
+  flex-shrink: 0;
+  text-align: right;
   margin-right: 12px;
 }
 
@@ -3614,16 +3637,32 @@ button, input, select, textarea {
   .tx-summary {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 6px;
-    padding: 10px;
+    gap: 8px;
+    padding: 10px 8px;
     margin-bottom: 12px;
-    border-radius: 10px;
+    border-radius: 12px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-light);
+  }
+  .tx-summary div {
+    min-width: 0;
+    text-align: center;
   }
   .tx-summary div span {
     font-size: 10px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .tx-summary div strong {
-    font-size: 13px;
+  .tx-summary div .money {
+    font-size: clamp(11.5px, 3.2vw, 14px);
+    font-weight: 800;
+    white-space: nowrap;
+    display: block;
   }
   .tx-toolbar {
     display: flex;
@@ -3662,32 +3701,74 @@ button, input, select, textarea {
     padding: 10px 8px;
     border-bottom: 1px solid var(--border-light);
     border-radius: 0;
+    width: 100%;
+    box-sizing: border-box;
   }
   .tx-main {
     gap: 10px;
+    width: 100%;
     min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+  .tx-main .cat-icon {
+    width: 38px !important;
+    height: 38px !important;
+    flex-shrink: 0;
   }
   .tx-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .tx-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     min-width: 0;
   }
   .tx-desc {
-    font-size: 13px;
+    font-size: 13.5px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 140px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .tx-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .tx-meta > span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tx-account {
+    max-width: 105px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .tx-amount {
-    font-size: 14px;
-    margin-right: 4px;
+    margin-left: auto !important;
+    flex-shrink: 0 !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+    font-size: 14.5px !important;
+    font-weight: 800;
+    margin-right: 0 !important;
   }
   .tx-actions {
-    opacity: 1;
-    gap: 0;
-  }
-  .tx-actions .icon-btn {
-    width: 32px;
-    height: 32px;
+    display: none !important;
   }
 
   /* 8. Planning View & Panels */
@@ -3725,6 +3806,166 @@ button, input, select, textarea {
   }
   .budget-edit-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Contas, Cartões e Recorrências no Celular */
+  .advanced-split-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .account-row-item {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .acc-icon-badge {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+  }
+  .acc-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .acc-info strong {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .acc-info small {
+    display: block;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .acc-actions-group {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .acc-actions-group .icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .inline-add-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg-subtle);
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px dashed var(--border-light);
+  }
+  .inline-add-form input,
+  .inline-add-form select,
+  .inline-add-form button {
+    width: 100%;
+    box-sizing: border-box;
+    height: 42px;
+  }
+  .inline-add-form button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-weight: 700;
+  }
+
+  .account-edit-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding: 10px;
+  }
+  .account-edit-row input {
+    grid-column: 1 / -1;
+    width: 100%;
+    box-sizing: border-box;
+    height: 38px;
+  }
+  .account-edit-row select {
+    grid-column: 1;
+    height: 38px;
+    box-sizing: border-box;
+  }
+  .account-edit-row .acc-actions-group {
+    grid-column: 2;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .account-edit-row .acc-actions-group .btn {
+    height: 38px;
+    width: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .recurring-row-card {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    grid-template-rows: auto auto;
+    gap: 10px 10px;
+    align-items: center;
+    padding: 12px;
+  }
+  .recurring-row-card .cat-icon {
+    grid-row: 1;
+    grid-column: 1;
+  }
+  .recurring-row-card .rec-info {
+    grid-row: 1;
+    grid-column: 2;
+    min-width: 0;
+  }
+  .recurring-row-card .rec-info strong {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 13.5px;
+    display: block;
+  }
+  .recurring-row-card .rec-info small {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    font-size: 11px;
+  }
+  .recurring-row-card .rec-actions {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-light);
+    margin-top: 2px;
+  }
+  .recurring-row-card .rec-val {
+    font-size: 14.5px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  .recurring-row-card .rec-btn-group {
+    gap: 6px;
+    display: flex;
+    align-items: center;
+  }
+  .recurring-row-card .rec-btn-group .btn {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 11.5px;
+  }
+  .recurring-row-card .rec-btn-group .icon-btn {
+    width: 32px;
+    height: 32px;
   }
 
   /* 9. Guide View */
