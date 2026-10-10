@@ -23,3 +23,4 @@ using ((select auth.uid()) = user_id)
 with check ((select auth.uid()) = user_id);
 
 create index if not exists custom_categories_user_idx on public.custom_categories (user_id);
+

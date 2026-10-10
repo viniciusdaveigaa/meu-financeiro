@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { AlertCircle, Bookmark, CreditCard, PiggyBank, Plus, Target } from 'lucide-react'
+import { Analytics } from '@vercel/analytics/react'
 import { configured, supabase } from './supabase'
 import { PrivacyProvider } from './context/PrivacyContext'
 import { CategoryProvider, useCategories } from './context/CategoryContext'
@@ -744,6 +745,7 @@ export default function App() {
     <PrivacyProvider>
       <DialogProvider>
         <AppContent />
+        <Analytics />
       </DialogProvider>
     </PrivacyProvider>
   )
