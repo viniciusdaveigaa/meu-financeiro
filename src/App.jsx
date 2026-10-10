@@ -15,7 +15,7 @@ import { CategoryBreakdown } from './components/CategoryBreakdown'
 import { TransactionList } from './components/TransactionList'
 import { TransactionModal } from './components/TransactionModal'
 import { BudgetPanel } from './components/BudgetPanel'
-import { SavingsPanel } from './components/SavingsPanel'
+import { SavingsPanel, prefetchSavings } from './components/SavingsPanel'
 import { AdvancedPanel } from './components/AdvancedPanel'
 import { CategoryManager } from './components/CategoryManager'
 import { UsageGuide } from './components/UsageGuide'
@@ -62,6 +62,7 @@ function MainDashboard({ session }) {
   const [allEntries, setAllEntries] = useState([])
   const [budgets, setBudgets] = useState([])
   const [accounts, setAccounts] = useState([])
+  const [recurring, setRecurring] = useState([])
   const [budgetReady, setBudgetReady] = useState(true)
   const [advancedReady, setAdvancedReady] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -69,6 +70,32 @@ function MainDashboard({ session }) {
   const [modal, setModal] = useState(null)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [userName, setUserName] = useState(() => session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || '')
+
+  const loadConfig = async () => {
+    if (!session?.user?.id) return
+    try {
+      const [accountsRes, recurringRes] = await Promise.all([
+        supabase.from('accounts').select('*').order('created_at'),
+        supabase
+          .from('recurring_transactions')
+          .select('*')
+          .order('created_at', { ascending: false })
+      ])
+
+      setAdvancedReady(!accountsRes.error && !recurringRes.error)
+      if (!accountsRes.error) {
+        const localLogos = getSavedAccountLogos(session.user.id)
+        const accountsWithLogos = (accountsRes.data || []).map((acc) => ({
+          ...acc,
+          logo: acc.logo || localLogos[acc.id] || resolveBankLogo('', acc.name, acc.kind).id
+        }))
+        setAccounts(accountsWithLogos)
+      }
+      if (!recurringRes.error) {
+        setRecurring(recurringRes.data || [])
+      }
+    } catch {}
+  }
 
   useEffect(() => {
     if (!session?.user?.id) return
@@ -90,25 +117,33 @@ function MainDashboard({ session }) {
             .catch(() => {})
         }
       })
+
+    // Carrega contas e regras de recorrência na inicialização
+    loadConfig()
+
+    // Pré-carrega caixinhas em segundo plano para abertura instantânea (0ms)
+    const prefetchTimer = setTimeout(() => {
+      prefetchSavings()
+    }, 800)
+
+    return () => clearTimeout(prefetchTimer)
   }, [session?.user?.id])
 
   const loadSeqRef = useRef(0)
 
-  const loadData = async () => {
+  const loadData = async (refreshConfig = false) => {
     const seq = ++loadSeqRef.current
     setLoading(true)
     setLoadError('')
     const range = getMonthRange(month)
-    // Fetch last 12 months for richer chart range
+    // Busca os últimos 12 meses trazendo apenas as colunas essenciais para o gráfico histórico
     const twelveMonthsAgo = `${changeMonth(month, -11)}-01`
 
     try {
       const [
         monthlyRes,
         historicRes,
-        budgetRes,
-        accountsRes,
-        recurringRes
+        budgetRes
       ] = await Promise.all([
         supabase
           .from('transactions')
@@ -118,22 +153,14 @@ function MainDashboard({ session }) {
           .order('date', { ascending: false }),
         supabase
           .from('transactions')
-          .select('*')
+          .select('id, date, type, amount, affects_balance, category')
           .gte('date', twelveMonthsAgo)
           .lte('date', range.to)
           .order('date', { ascending: true }),
         supabase
           .from('budgets')
           .select('*')
-          .eq('month', `${month}-01`),
-        supabase
-          .from('accounts')
-          .select('*')
-          .order('created_at'),
-        supabase
-          .from('recurring_transactions')
-          .select('*')
-          .order('created_at', { ascending: false })
+          .eq('month', `${month}-01`)
       ])
 
       if (seq !== loadSeqRef.current) return
@@ -158,14 +185,8 @@ function MainDashboard({ session }) {
         setBudgets(budgetRes.data || [])
       }
 
-      setAdvancedReady(!accountsRes.error && !recurringRes.error)
-      if (!accountsRes.error) {
-        const localLogos = getSavedAccountLogos(session.user.id)
-        const accountsWithLogos = (accountsRes.data || []).map((acc) => ({
-          ...acc,
-          logo: acc.logo || localLogos[acc.id] || resolveBankLogo('', acc.name, acc.kind).id
-        }))
-        setAccounts(accountsWithLogos)
+      if (refreshConfig) {
+        loadConfig()
       }
     } catch {
       if (seq === loadSeqRef.current) {
@@ -187,12 +208,21 @@ function MainDashboard({ session }) {
   }, [activeTab])
 
   useEffect(() => {
-    const refresh = () => loadData()
-    window.addEventListener('finance-data-changed', refresh)
-    window.addEventListener('account-logos-changed', refresh)
+    const handleFinanceRefresh = () => {
+      loadData()
+      loadConfig()
+    }
+    const handleConfigRefresh = () => {
+      loadConfig()
+    }
+
+    window.addEventListener('finance-data-changed', handleFinanceRefresh)
+    window.addEventListener('account-logos-changed', handleConfigRefresh)
+    window.addEventListener('recurring-data-changed', handleConfigRefresh)
     return () => {
-      window.removeEventListener('finance-data-changed', refresh)
-      window.removeEventListener('account-logos-changed', refresh)
+      window.removeEventListener('finance-data-changed', handleFinanceRefresh)
+      window.removeEventListener('account-logos-changed', handleConfigRefresh)
+      window.removeEventListener('recurring-data-changed', handleConfigRefresh)
     }
   }, [month])
 
@@ -679,7 +709,12 @@ function MainDashboard({ session }) {
 
                   {visitedPlanningTabs.has('accounts') && (
                     <div style={{ display: planningSubTab === 'accounts' ? 'block' : 'none' }}>
-                      <AdvancedPanel month={month} userId={session?.user?.id} />
+                      <AdvancedPanel
+                        month={month}
+                        userId={session?.user?.id}
+                        initialAccounts={accounts}
+                        initialRecurring={recurring}
+                      />
                     </div>
                   )}
 

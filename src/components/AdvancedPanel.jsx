@@ -34,12 +34,19 @@ import { useCategories } from '../context/CategoryContext'
 import { useAppDialog } from './Dialog'
 import { BankLogoBadge, CategoryIcon, Money } from './ui'
 
-export function AdvancedPanel({ month, userId }) {
+export function AdvancedPanel({
+  month,
+  userId,
+  initialAccounts = [],
+  initialRecurring = []
+}) {
   const dialog = useAppDialog()
   const { categories, getMeta } = useCategories()
-  const [accounts, setAccounts] = useState([])
-  const [recurring, setRecurring] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [accounts, setAccounts] = useState(() => initialAccounts || [])
+  const [recurring, setRecurring] = useState(() => initialRecurring || [])
+  const [loading, setLoading] = useState(
+    () => (!initialAccounts || initialAccounts.length === 0) && (!initialRecurring || initialRecurring.length === 0)
+  )
   const [name, setName] = useState('')
   const [kind, setKind] = useState('account')
   const [logo, setLogo] = useState('')
@@ -51,8 +58,26 @@ export function AdvancedPanel({ month, userId }) {
   const [savingRecurring, setSavingRecurring] = useState(false)
   const generatingRef = useRef(false)
 
-  const load = async () => {
+  // Sincroniza estado se o componente pai repassar novos dados atualizados
+  useEffect(() => {
+    if (initialAccounts && initialAccounts.length > 0) {
+      setAccounts(initialAccounts)
+      setLoading(false)
+    }
+  }, [initialAccounts])
+
+  useEffect(() => {
+    if (initialRecurring && initialRecurring.length > 0) {
+      setRecurring(initialRecurring)
+      setLoading(false)
+    }
+  }, [initialRecurring])
+
+  const load = async (isBackground = false) => {
     try {
+      if (!isBackground && accounts.length === 0 && recurring.length === 0) {
+        setLoading(true)
+      }
       const currentUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id || 'default'
 
       const [accountResult, recurringResult] = await Promise.all([
@@ -82,7 +107,8 @@ export function AdvancedPanel({ month, userId }) {
   }
 
   useEffect(() => {
-    load()
+    const hasInitial = (initialAccounts && initialAccounts.length > 0) || (initialRecurring && initialRecurring.length > 0)
+    load(hasInitial)
   }, [])
 
   useEffect(() => {

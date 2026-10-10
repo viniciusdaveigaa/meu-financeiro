@@ -18,11 +18,32 @@ import {
 import { useAppDialog } from './Dialog'
 import { Money } from './ui'
 
+// Module-level cache for instant tab opening (0ms)
+let savingsCache = null
+
+export const prefetchSavings = async () => {
+  try {
+    const [boxResult, contributionResult] = await Promise.all([
+      supabase.from('savings_boxes').select('id, name, target_amount, created_at').order('created_at'),
+      supabase.from('savings_contributions').select('box_id, amount')
+    ])
+
+    if (!boxResult.error && !contributionResult.error) {
+      savingsCache = {
+        boxes: boxResult.data || [],
+        contributions: contributionResult.data || []
+      }
+      return savingsCache
+    }
+  } catch {}
+  return null
+}
+
 export function SavingsPanel({ userId }) {
   const dialog = useAppDialog()
-  const [boxes, setBoxes] = useState([])
-  const [contributions, setContributions] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [boxes, setBoxes] = useState(() => savingsCache?.boxes || [])
+  const [contributions, setContributions] = useState(() => savingsCache?.contributions || [])
+  const [loading, setLoading] = useState(() => !savingsCache)
   const [name, setName] = useState('')
   const [target, setTarget] = useState('')
   const [amounts, setAmounts] = useState({})
@@ -31,8 +52,11 @@ export function SavingsPanel({ userId }) {
   const [creating, setCreating] = useState(false)
   const [openNew, setOpenNew] = useState(false)
 
-  const load = async () => {
+  const load = async (isBackground = false) => {
     try {
+      if (!isBackground && !savingsCache) {
+        setLoading(true)
+      }
       const [boxResult, contributionResult] = await Promise.all([
         supabase.from('savings_boxes').select('id, name, target_amount, created_at').order('created_at'),
         supabase.from('savings_contributions').select('box_id, amount')
@@ -44,15 +68,24 @@ export function SavingsPanel({ userId }) {
       }
 
       setReady(true)
-      setBoxes(boxResult.data || [])
-      setContributions(contributionResult.data || [])
+      const newBoxes = boxResult.data || []
+      const newContribs = contributionResult.data || []
+      savingsCache = { boxes: newBoxes, contributions: newContribs }
+      setBoxes(newBoxes)
+      setContributions(newContribs)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    load()
+    load(Boolean(savingsCache))
+  }, [])
+
+  useEffect(() => {
+    const handleSync = () => load(true)
+    window.addEventListener('finance-data-changed', handleSync)
+    return () => window.removeEventListener('finance-data-changed', handleSync)
   }, [])
 
   const createBox = async (e) => {
@@ -87,7 +120,12 @@ export function SavingsPanel({ userId }) {
     }
 
     // Otimista: atualiza o saldo local instantaneamente
-    setContributions((prev) => [...prev, { box_id: box.id, amount }])
+    const newContrib = { box_id: box.id, amount }
+    setContributions((prev) => {
+      const next = [...prev, newContrib]
+      if (savingsCache) savingsCache.contributions = next
+      return next
+    })
     setAmounts({ ...amounts, [box.id]: '' })
 
     const { error } = await supabase.rpc('add_savings_contribution_v2', {
@@ -113,8 +151,16 @@ export function SavingsPanel({ userId }) {
     if (!confirmed) return
 
     // Otimista: remove da tela imediatamente
-    setBoxes((prev) => prev.filter((b) => b.id !== id))
-    setContributions((prev) => prev.filter((c) => c.box_id !== id))
+    setBoxes((prev) => {
+      const next = prev.filter((b) => b.id !== id)
+      if (savingsCache) savingsCache.boxes = next
+      return next
+    })
+    setContributions((prev) => {
+      const next = prev.filter((c) => c.box_id !== id)
+      if (savingsCache) savingsCache.contributions = next
+      return next
+    })
 
     // 1 e 2. Exclui os lançamentos no extrato e a caixinha em paralelo
     const [txDel, boxDel] = await Promise.all([
