@@ -558,6 +558,7 @@ function MainDashboard({ session }) {
                     compact={true}
                     limit={6}
                     onViewAll={() => setActiveTab('transactions')}
+                    month={month}
                   />
                 </section>
               </div>
@@ -574,6 +575,7 @@ function MainDashboard({ session }) {
                   onRemove={removeTransaction}
                   onAddNew={() => setModal({})}
                   compact={false}
+                  month={month}
                 />
               </section>
             )}

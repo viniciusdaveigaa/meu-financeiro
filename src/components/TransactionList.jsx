@@ -1,8 +1,26 @@
 import { useMemo, useState } from 'react'
-import { ArrowRight, CreditCard, Landmark, Pencil, Plus, ReceiptText, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
+import {
+  ArrowRight,
+  CreditCard,
+  Download,
+  FileDown,
+  FileText,
+  Landmark,
+  Pencil,
+  Plus,
+  ReceiptText,
+  Search,
+  SlidersHorizontal,
+  Trash2,
+  Upload,
+  X
+} from 'lucide-react'
 import { dayGroupLabel, searchableText } from '../utils/formatters'
 import { getCategoryLabel, getCategoryMeta } from '../constants/categories'
 import { useCategories } from '../context/CategoryContext'
+import { exportToCsv } from '../utils/exportImport'
+import { CsvImportModal } from './CsvImportModal'
+import { ReportModal } from './ReportModal'
 import { BankLogoBadge, CategoryIcon, Money } from './ui'
 
 const TYPE_FILTERS = [
@@ -19,7 +37,18 @@ function signedTotal(items) {
   }, 0)
 }
 
-export function TransactionList({ entries, accounts, loading, onEdit, onRemove, onAddNew, compact = false, limit = 6, onViewAll }) {
+export function TransactionList({
+  entries,
+  accounts,
+  loading,
+  onEdit,
+  onRemove,
+  onAddNew,
+  compact = false,
+  limit = 6,
+  onViewAll,
+  month = ''
+}) {
   const { categories, getMeta } = useCategories()
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -27,6 +56,8 @@ export function TransactionList({ entries, accounts, loading, onEdit, onRemove, 
   const [accountFilter, setAccountFilter] = useState('all')
   const [sortBy, setSortBy] = useState('date-desc')
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [reportModalOpen, setReportModalOpen] = useState(false)
+  const [csvModalOpen, setCsvModalOpen] = useState(false)
 
   const accountMap = useMemo(() => Object.fromEntries((accounts || []).map((account) => [account.id, account])), [accounts])
 
@@ -90,9 +121,38 @@ export function TransactionList({ entries, accounts, loading, onEdit, onRemove, 
             </button>
           )
         ) : (
-          <button type="button" className="btn btn-primary btn-sm hide-mobile" onClick={onAddNew}>
-            <Plus size={16} /> Adicionar
-          </button>
+          <div className="card-head-actions">
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => setReportModalOpen(true)}
+              title="Gerar relatório financeiro em PDF"
+            >
+              <FileText size={15} />
+              <span className="hide-mobile">Relatório PDF</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => exportToCsv({ entries: filtered, month, accounts })}
+              title="Exportar para arquivo .CSV (Excel/Google Planilhas)"
+            >
+              <Download size={15} />
+              <span className="hide-mobile">Exportar CSV</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => setCsvModalOpen(true)}
+              title="Importar lançamentos a partir de um arquivo .CSV"
+            >
+              <Upload size={15} />
+              <span className="hide-mobile">Importar CSV</span>
+            </button>
+            <button type="button" className="btn btn-primary btn-sm" onClick={onAddNew}>
+              <Plus size={16} /> <span className="hide-mobile">Adicionar</span>
+            </button>
+          </div>
         )}
       </header>
 
@@ -235,6 +295,22 @@ export function TransactionList({ entries, accounts, loading, onEdit, onRemove, 
             </button>
           )}
         </div>
+      )}
+
+      {reportModalOpen && (
+        <ReportModal
+          entries={filtered}
+          month={month}
+          accounts={accounts}
+          onClose={() => setReportModalOpen(false)}
+        />
+      )}
+
+      {csvModalOpen && (
+        <CsvImportModal
+          accounts={accounts}
+          onClose={() => setCsvModalOpen(false)}
+        />
       )}
     </article>
   )
