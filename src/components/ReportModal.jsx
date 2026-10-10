@@ -13,6 +13,7 @@ import {
 import { exportToCsv, generatePdfReport } from '../utils/exportImport'
 import { formatMoney, formatMonthName, formatDateLabel } from '../utils/formatters'
 import { getCategoryLabel } from '../constants/categories'
+import { useAppDialog } from './Dialog'
 import { Money } from './ui'
 
 export function ReportModal({
@@ -21,6 +22,7 @@ export function ReportModal({
   accounts = [],
   onClose
 }) {
+  const dialog = useAppDialog()
   const [downloading, setDownloading] = useState(false)
 
   const accountMap = Object.fromEntries((accounts || []).map((acc) => [acc.id, acc.name]))
@@ -45,7 +47,27 @@ export function ReportModal({
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
+    const filename = `relatorio-extrato-${month || 'saldo-claro'}.pdf`
+    const periodLabel = formatMonthName(month) || 'Período atual'
+    const confirmed = await dialog.confirmDownload({
+      title: 'Baixar Relatório em PDF',
+      message: 'Confirme o download do relatório financeiro oficial do período:',
+      fileName: filename,
+      fileType: 'Relatório Financeiro (.pdf)',
+      fileFormat: 'PDF',
+      description: 'Documento em formato A4 com indicadores de receitas, saídas, taxa de economia, maiores grupos de despesa e tabela analítica de movimentações.',
+      details: [
+        { label: 'Referência', value: periodLabel },
+        { label: 'Movimentações', value: `${entries.length} registro${entries.length === 1 ? '' : 's'}` },
+        { label: 'Receitas', value: formatMoney(incomes) },
+        { label: 'Despesas', value: formatMoney(expenses) }
+      ],
+      confirmLabel: 'Baixar Relatório'
+    })
+
+    if (!confirmed) return
+
     setDownloading(true)
     try {
       generatePdfReport({
@@ -62,7 +84,27 @@ export function ReportModal({
     window.print()
   }
 
-  const handleExportCsv = () => {
+  const handleExportCsv = async () => {
+    const filename = `extrato-saldo-claro-${month || 'completo'}.csv`
+    const periodLabel = formatMonthName(month) || 'Período selecionado'
+    const confirmed = await dialog.confirmDownload({
+      title: 'Exportar Extrato em Planilha CSV',
+      message: 'Confirme a exportação dos dados do extrato para arquivo CSV:',
+      fileName: filename,
+      fileType: 'Planilha de Lançamentos (.csv)',
+      fileFormat: 'CSV',
+      description: 'Arquivo estruturado pronto para abrir no Excel ou Google Planilhas com todas as colunas do extrato.',
+      details: [
+        { label: 'Referência', value: periodLabel },
+        { label: 'Total de linhas', value: `${entries.length} registro${entries.length === 1 ? '' : 's'}` },
+        { label: 'Formato', value: 'UTF-8 com BOM (Excel)' },
+        { label: 'Contas vinculadas', value: `${accounts.length} cadastrada${accounts.length === 1 ? '' : 's'}` }
+      ],
+      confirmLabel: 'Baixar Planilha'
+    })
+
+    if (!confirmed) return
+
     exportToCsv({
       entries,
       month,

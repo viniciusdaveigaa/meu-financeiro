@@ -141,6 +141,27 @@ export function CsvImportModal({ accounts = [], onClose, onImportSuccess }) {
     }
   }
 
+  const handleDownloadSample = async () => {
+    const confirmed = await dialog.confirmDownload({
+      title: 'Baixar Modelo de Planilha CSV',
+      message: 'Confirme o download do modelo de exemplo pré-formatado:',
+      fileName: 'modelo-importacao-saldo-claro.csv',
+      fileType: 'Planilha de Exemplo (.csv)',
+      fileFormat: 'CSV',
+      description: 'Arquivo com colunas pré-configuradas (Data, Tipo, Descrição, Categoria, Valor e Conta) para facilitar o preenchimento e importação.',
+      details: [
+        { label: 'Formato', value: 'Delimitado por ponto e vírgula (;)' },
+        { label: 'Exemplos', value: '6 lançamentos de demonstração' },
+        { label: 'Codificação', value: 'UTF-8 com suporte ao Excel' },
+        { label: 'Finalidade', value: 'Preencher e importar no sistema' }
+      ],
+      confirmLabel: 'Baixar Modelo'
+    })
+
+    if (!confirmed) return
+    downloadSampleCsv()
+  }
+
   return (
     <div
       className="modal-backdrop"
@@ -298,7 +319,7 @@ export function CsvImportModal({ accounts = [], onClose, onImportSuccess }) {
             <button
               type="button"
               className="btn-sample-csv"
-              onClick={downloadSampleCsv}
+              onClick={handleDownloadSample}
               title="Baixar planilha modelo de exemplo"
             >
               <Download size={14} /> Baixar modelo de CSV de exemplo

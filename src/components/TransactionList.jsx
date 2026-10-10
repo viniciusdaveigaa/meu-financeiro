@@ -15,10 +15,11 @@ import {
   Upload,
   X
 } from 'lucide-react'
-import { dayGroupLabel, searchableText } from '../utils/formatters'
+import { dayGroupLabel, searchableText, formatMonthName } from '../utils/formatters'
 import { getCategoryLabel, getCategoryMeta } from '../constants/categories'
 import { useCategories } from '../context/CategoryContext'
 import { exportToCsv } from '../utils/exportImport'
+import { useAppDialog } from './Dialog'
 import { CsvImportModal } from './CsvImportModal'
 import { ReportModal } from './ReportModal'
 import { BankLogoBadge, CategoryIcon, Money } from './ui'
@@ -49,6 +50,7 @@ export function TransactionList({
   onViewAll,
   month = ''
 }) {
+  const dialog = useAppDialog()
   const { categories, getMeta } = useCategories()
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -107,6 +109,30 @@ export function TransactionList({
   const filteredIncome = filtered.filter((item) => item.type === 'income' && item.affects_balance !== false).reduce((sum, item) => sum + Number(item.amount), 0)
   const filteredExpense = filtered.filter((item) => item.type === 'expense' && item.affects_balance !== false).reduce((sum, item) => sum + Number(item.amount), 0)
 
+  const handleExportCsv = async () => {
+    const count = filtered.length
+    const filename = `extrato-saldo-claro-${month || 'completo'}.csv`
+    const periodLabel = formatMonthName(month) || 'Extrato completo'
+    const confirmed = await dialog.confirmDownload({
+      title: 'Exportar Extrato em Planilha CSV',
+      message: 'Confirme a exportação dos lançamentos para planilha:',
+      fileName: filename,
+      fileType: 'Planilha de Lançamentos (.csv)',
+      fileFormat: 'CSV',
+      description: 'Arquivo de planilha com colunas de Data, Tipo, Descrição, Categoria, Valor, Conta e Parcelas.',
+      details: [
+        { label: 'Referência', value: periodLabel },
+        { label: 'Lançamentos', value: `${count} registro${count === 1 ? '' : 's'}` },
+        { label: 'Formato', value: 'CSV compatível com Excel' },
+        { label: 'Filtro', value: hasFilters ? 'Lançamentos filtrados' : 'Todos os itens' }
+      ],
+      confirmLabel: 'Baixar Planilha'
+    })
+
+    if (!confirmed) return
+    exportToCsv({ entries: filtered, month, accounts })
+  }
+
   return (
     <article className={`card tx-card ${compact ? 'is-compact' : ''}`}>
       <header className="card-head">
@@ -134,7 +160,7 @@ export function TransactionList({
             <button
               type="button"
               className="btn btn-outline btn-sm"
-              onClick={() => exportToCsv({ entries: filtered, month, accounts })}
+              onClick={handleExportCsv}
               title="Exportar para arquivo .CSV (Excel/Google Planilhas)"
             >
               <Download size={15} />

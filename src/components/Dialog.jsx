@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Info, X } from 'lucide-react'
+import { AlertTriangle, Download, FileSpreadsheet, FileText, Info, X } from 'lucide-react'
 
 const DialogContext = createContext(null)
 
@@ -42,6 +42,27 @@ export function DialogProvider({ children }) {
       confirmLabel: options.confirmLabel || 'Entendido',
     })
 
+  const confirmDownload = (options = {}) =>
+    open({
+      kind: 'download',
+      title: options.title || 'Confirmar Download',
+      message: options.message || 'Você confirma o download deste arquivo gerado pelo Saldo Claro?',
+      fileName: options.fileName || 'arquivo',
+      fileType: options.fileType || 'Arquivo para download',
+      fileFormat:
+        options.fileFormat ||
+        (options.fileName?.endsWith('.pdf')
+          ? 'PDF'
+          : options.fileName?.endsWith('.csv')
+          ? 'CSV'
+          : ''),
+      description: options.description || '',
+      details: options.details || [],
+      confirmLabel: options.confirmLabel || 'Baixar arquivo',
+      cancelLabel: options.cancelLabel || 'Cancelar',
+      danger: false
+    })
+
   useEffect(() => {
     if (!dialog) return
     const prevOverflow = document.body.style.overflow
@@ -60,7 +81,7 @@ export function DialogProvider({ children }) {
   }, [dialog])
 
   return (
-    <DialogContext.Provider value={{ confirm, alert }}>
+    <DialogContext.Provider value={{ confirm, alert, confirmDownload }}>
       {children}
       {dialog && (
         <div
@@ -70,26 +91,84 @@ export function DialogProvider({ children }) {
           }}
         >
           <div
-            className={`dialog-box ${dialog.kind} ${dialog.danger ? 'danger' : ''}`}
+            className={`dialog-box ${dialog.kind} ${dialog.danger ? 'danger' : ''} ${
+              dialog.kind === 'download' ? 'download-dialog' : ''
+            }`}
             role={dialog.kind === 'alert' ? 'alertdialog' : 'dialog'}
             aria-modal="true"
           >
             <div className="dialog-header">
-              <span className={`dialog-badge-icon ${dialog.danger ? 'danger' : 'info'}`}>
-                {dialog.kind === 'confirm' ? (
+              <span
+                className={`dialog-badge-icon ${
+                  dialog.kind === 'download'
+                    ? 'download'
+                    : dialog.danger
+                    ? 'danger'
+                    : 'info'
+                }`}
+              >
+                {dialog.kind === 'download' ? (
+                  <Download size={20} />
+                ) : dialog.kind === 'confirm' ? (
                   <AlertTriangle size={20} />
                 ) : (
                   <Info size={20} />
                 )}
               </span>
               <div>
-                <span className="dialog-tag">SALDO CLARO</span>
+                <span className="dialog-tag">
+                  {dialog.kind === 'download' ? 'SALDO CLARO • DOWNLOAD SEGURO' : 'SALDO CLARO'}
+                </span>
                 <h3>{dialog.title}</h3>
               </div>
             </div>
-            <p className="dialog-message">{dialog.message}</p>
+
+            {dialog.kind === 'download' ? (
+              <div className="download-dialog-content">
+                <p className="dialog-message">{dialog.message}</p>
+
+                <div className="download-info-card">
+                  <div className="download-file-row">
+                    <span className="download-file-icon">
+                      {dialog.fileFormat === 'PDF' ? (
+                        <FileText size={22} />
+                      ) : (
+                        <FileSpreadsheet size={22} />
+                      )}
+                    </span>
+                    <div className="download-file-meta">
+                      <strong className="download-file-name">{dialog.fileName}</strong>
+                      <span className="download-file-type">
+                        {dialog.fileType}
+                        {dialog.fileFormat && (
+                          <span className="download-ext-tag">{dialog.fileFormat}</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  {dialog.description && (
+                    <p className="download-file-desc">{dialog.description}</p>
+                  )}
+
+                  {dialog.details && dialog.details.length > 0 && (
+                    <div className="download-details-grid">
+                      {dialog.details.map((item, idx) => (
+                        <div key={idx} className="download-detail-item">
+                          <span className="detail-label">{item.label}</span>
+                          <strong className="detail-val">{item.value}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="dialog-message">{dialog.message}</p>
+            )}
+
             <div className="dialog-actions">
-              {dialog.kind === 'confirm' && (
+              {(dialog.kind === 'confirm' || dialog.kind === 'download') && (
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
@@ -100,10 +179,13 @@ export function DialogProvider({ children }) {
               )}
               <button
                 type="button"
-                className={`btn ${dialog.danger ? 'btn-danger' : 'btn-primary'} btn-sm`}
+                className={`btn ${
+                  dialog.danger ? 'btn-danger' : 'btn-primary'
+                } btn-sm`}
                 autoFocus
                 onClick={() => finish(true)}
               >
+                {dialog.kind === 'download' && <Download size={14} />}
                 {dialog.confirmLabel}
               </button>
             </div>
