@@ -38,7 +38,7 @@ export function UsageGuide({ onGoToDashboard }) {
       icon: Eye,
       number: '04',
       title: 'Modo Privacidade (Estilo Nubank)',
-      text: 'Clique no ícone de olho no topo da página ou na barra inferior do celular para ocultar todos os valores em dinheiro na tela. Seus números viram barras discretas animadas, perfeito para usar em público ou no trabalho.'
+      text: 'Clique no ícone de olho no topo da página (ao lado do seu avatar) para ocultar todos os valores em dinheiro na tela. Seus números viram barras discretas animadas, perfeito para usar em público ou no trabalho.'
     },
     {
       icon: Layers,

@@ -5,7 +5,6 @@ import {
   ReceiptText,
   Target
 } from 'lucide-react'
-import { PrivacyToggle } from './ui'
 
 export function MobileNav({
   activeTab,
@@ -13,61 +12,67 @@ export function MobileNav({
   onNewTransaction
 }) {
   return (
-    <>
-      {/* Floating Action Button (FAB) */}
+    <nav className="mobile-bottom-bar" aria-label="Navegação Principal">
+      {/* 1. Início */}
       <button
         type="button"
-        className="mobile-fab-btn"
-        onClick={onNewTransaction}
-        title="Novo lançamento (N)"
-        aria-label="Adicionar lançamento"
+        className={`mobile-nav-tab ${activeTab === 'dashboard' ? 'active' : ''}`}
+        onClick={() => onTabChange('dashboard')}
       >
-        <Plus size={26} strokeWidth={2.4} />
+        <span className="nav-tab-icon">
+          <LayoutDashboard size={21} strokeWidth={activeTab === 'dashboard' ? 2.3 : 1.8} />
+        </span>
+        <span className="nav-tab-label">Início</span>
       </button>
 
-      {/* Bottom Navigation Bar for Mobile */}
-      <nav className="mobile-bottom-bar" aria-label="Navegação Mobile">
+      {/* 2. Extrato */}
+      <button
+        type="button"
+        className={`mobile-nav-tab ${activeTab === 'transactions' ? 'active' : ''}`}
+        onClick={() => onTabChange('transactions')}
+      >
+        <span className="nav-tab-icon">
+          <ReceiptText size={21} strokeWidth={activeTab === 'transactions' ? 2.3 : 1.8} />
+        </span>
+        <span className="nav-tab-label">Extrato</span>
+      </button>
+
+      {/* 3. Botão Central: Novo Lançamento (+) */}
+      <div className="mobile-nav-center-slot">
         <button
           type="button"
-          className={`mobile-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => onTabChange('dashboard')}
+          className="mobile-nav-center-btn"
+          onClick={onNewTransaction}
+          aria-label="Novo lançamento"
+          title="Novo lançamento"
         >
-          <LayoutDashboard size={20} />
-          <span className="mobile-nav-label">Início</span>
+          <Plus size={24} strokeWidth={2.6} />
         </button>
+      </div>
 
-        <button
-          type="button"
-          className={`mobile-nav-item ${activeTab === 'transactions' ? 'active' : ''}`}
-          onClick={() => onTabChange('transactions')}
-        >
-          <ReceiptText size={20} />
-          <span className="mobile-nav-label">Extrato</span>
-        </button>
+      {/* 4. Metas / Planejamento */}
+      <button
+        type="button"
+        className={`mobile-nav-tab ${activeTab === 'planning' ? 'active' : ''}`}
+        onClick={() => onTabChange('planning')}
+      >
+        <span className="nav-tab-icon">
+          <Target size={21} strokeWidth={activeTab === 'planning' ? 2.3 : 1.8} />
+        </span>
+        <span className="nav-tab-label">Metas</span>
+      </button>
 
-        <button
-          type="button"
-          className={`mobile-nav-item ${activeTab === 'planning' ? 'active' : ''}`}
-          onClick={() => onTabChange('planning')}
-        >
-          <Target size={20} />
-          <span className="mobile-nav-label">Metas</span>
-        </button>
-
-        <button
-          type="button"
-          className={`mobile-nav-item ${activeTab === 'guide' ? 'active' : ''}`}
-          onClick={() => onTabChange('guide')}
-        >
-          <CircleHelp size={20} />
-          <span className="mobile-nav-label">Ajuda</span>
-        </button>
-
-        <div className="mobile-nav-item privacy-slot">
-          <PrivacyToggle size={20} />
-          <span className="mobile-nav-label">Ocultar</span>
-        </div>
-      </nav>
-    </>
+      {/* 5. Central de Ajuda */}
+      <button
+        type="button"
+        className={`mobile-nav-tab ${activeTab === 'guide' ? 'active' : ''}`}
+        onClick={() => onTabChange('guide')}
+      >
+        <span className="nav-tab-icon">
+          <CircleHelp size={21} strokeWidth={activeTab === 'guide' ? 2.3 : 1.8} />
+        </span>
+        <span className="nav-tab-label">Ajuda</span>
+      </button>
+    </nav>
   )
 }

@@ -3214,7 +3214,7 @@ button, input, select, textarea {
 }
 
 /* =========================================================
-   MOBILE BOTTOM BAR & FAB
+   MOBILE BOTTOM NAVIGATION BAR (NATIVE APP STYLE)
    ========================================================= */
 .mobile-bottom-bar {
   display: none;
@@ -3222,60 +3222,98 @@ button, input, select, textarea {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60px;
+  height: calc(60px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(14px);
-  border-top: 1px solid var(--border-light);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(16, 56, 47, 0.08);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
   z-index: 50;
-  justify-content: space-around;
+  grid-template-columns: 1fr 1fr 64px 1fr 1fr;
   align-items: center;
-  padding: 0 8px;
+  justify-items: center;
 }
 
-.mobile-nav-item {
+.mobile-nav-tab {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  height: 56px;
   background: none;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 4px 10px;
-  transition: all 0.15s ease;
+  padding: 4px 0;
+  transition: color 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.mobile-nav-label {
+.mobile-nav-tab:active {
+  transform: scale(0.92);
+}
+
+.nav-tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  transition: transform 0.15s ease;
+}
+
+.nav-tab-label {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  line-height: 1;
 }
 
-.mobile-nav-item.active {
+.mobile-nav-tab.active {
   color: var(--emerald-800);
 }
 
-.privacy-slot .privacy-toggle {
-  width: 22px;
-  height: 22px;
-  color: inherit;
+.mobile-nav-tab.active .nav-tab-label {
+  font-weight: 800;
 }
 
-.mobile-fab-btn {
-  display: none;
-  position: fixed;
-  right: 18px;
-  bottom: 74px;
-  width: 52px;
-  height: 52px;
+.mobile-nav-tab.active .nav-tab-icon {
+  transform: translateY(-1px);
+}
+
+/* Central (+) Action Button Slot */
+.mobile-nav-center-slot {
+  position: relative;
+  width: 64px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-nav-center-btn {
+  position: absolute;
+  top: -14px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--emerald-800), var(--emerald-600));
   color: #fff;
-  border: none;
-  box-shadow: 0 6px 20px rgba(16, 56, 47, 0.35);
-  z-index: 55;
+  border: 3px solid #fff;
+  box-shadow: 0 6px 18px rgba(16, 56, 47, 0.38);
+  display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-nav-center-btn:active {
+  transform: scale(0.9);
+  box-shadow: 0 2px 8px rgba(16, 56, 47, 0.3);
 }
 
 /* =========================================================
@@ -3374,18 +3412,51 @@ button, input, select, textarea {
 }
 
 @media (max-width: 768px) {
+  /* 1. Header & Navigation */
   .topbar-nav, .user-email-text, .btn-quick-add, .hide-mobile {
     display: none !important;
   }
-  .mobile-bottom-bar, .mobile-fab-btn {
-    display: flex;
+  .app-topbar {
+    padding-top: env(safe-area-inset-top, 0px);
   }
+  .topbar-container {
+    padding: 10px 14px;
+  }
+  .topbar-actions {
+    gap: 8px;
+  }
+  .mobile-bottom-bar {
+    display: grid !important;
+  }
+
+  /* 2. Main Shell & Spacing */
   .app-main-content {
-    padding: 16px 14px 90px;
+    padding: 12px 14px calc(80px + env(safe-area-inset-bottom, 16px));
   }
+  .card {
+    padding: 16px 14px;
+    border-radius: var(--radius-lg);
+  }
+  .card-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  /* 3. Hero & Month Picker */
   .dashboard-control-hero {
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .hero-eyebrow, .hero-subtext {
+    display: none;
+  }
+  .hero-heading {
+    font-size: 20px;
+    margin-bottom: 0;
   }
   .month-picker {
     width: 100%;
@@ -3400,32 +3471,301 @@ button, input, select, textarea {
     right: 0;
     width: 100%;
   }
-  .metric-strip {
+
+  /* 4. Metric Cards (Nubank style 2-col strip) */
+  .metrics {
     grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .metric-hero {
+    padding: 18px 16px;
+    border-radius: var(--radius-lg);
+  }
+  .metric-hero-value {
+    font-size: 30px;
+    letter-spacing: -0.8px;
+    margin-bottom: 10px;
+  }
+  .metric-hero-foot {
+    font-size: 11.5px;
+  }
+  .metric-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .metric-tile {
+    padding: 14px 12px;
+    border-radius: var(--radius-md);
+  }
+  .metric-tile .metric-icon {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 6px;
+  }
+  .metric-tile .metric-label {
+    font-size: 11px;
+  }
+  .metric-tile .metric-value {
+    font-size: 16px;
+  }
+  .metric-tile .delta {
+    font-size: 10px;
+  }
+  /* Taxa de economia tile spans across 2 columns as a horizontal banner */
+  .metric-strip article:last-child {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 2px;
+  }
+  .metric-strip article:last-child .metric-icon {
+    grid-row: 1 / 3;
+    margin-bottom: 0;
+  }
+  .metric-strip article:last-child .metric-label {
+    grid-column: 2;
+  }
+  .metric-strip article:last-child .metric-value {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    font-size: 18px;
+    text-align: right;
+  }
+  .metric-strip article:last-child .delta {
+    grid-column: 2;
+  }
+
+  /* 5. Financial Pulse (Saúde Financeira) */
+  .pulse-card {
+    padding: 16px;
+    gap: 14px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 14px;
+  }
+  .pulse-score {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 12px;
+  }
+  .pulse-ring {
+    width: 62px;
+    height: 62px;
+  }
+  .pulse-ring-center strong {
+    font-size: 18px;
+  }
+  .pulse-score-info p {
+    display: none;
   }
   .pulse-metrics {
-    grid-template-columns: 1fr;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    background: transparent;
+    border: none;
   }
   .pulse-metrics div {
-    border-left: none !important;
-    border-top: 1px solid var(--border-light);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-light) !important;
+    border-radius: 10px;
+    padding: 10px;
   }
-  .pulse-metrics div:first-child {
-    border-top: none;
+  .pulse-metrics div span {
+    font-size: 10.5px;
+  }
+  .pulse-metrics div strong {
+    font-size: 14px;
+  }
+  .pulse-metrics div small {
+    font-size: 10px;
+  }
+  .pulse-insights li {
+    font-size: 11.5px;
+    padding: 8px 10px;
+  }
+
+  /* 6. Chart Controls & Summary */
+  .chart-controls {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
   }
   .chart-summary {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    font-size: 11px;
+    padding-top: 12px;
   }
+  .chart-summary div span {
+    font-size: 10px;
+  }
+  .chart-summary div strong,
+  .chart-summary div b {
+    font-size: 12px;
+  }
+
+  /* 7. Transaction List & Extrato */
+  .tx-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+  }
+  .tx-summary div span {
+    font-size: 10px;
+  }
+  .tx-summary div strong {
+    font-size: 13px;
+  }
+  .tx-toolbar {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .search-field {
+    flex: 1;
+  }
+  .btn-filter {
+    white-space: nowrap;
+    padding: 0 12px;
+  }
+  .chip-row {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 6px;
+    padding-bottom: 4px;
+    margin-bottom: 12px;
+  }
+  .chip-row::-webkit-scrollbar {
+    display: none;
+  }
+  .chip {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .tx-filters {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .tx-row {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border-light);
+    border-radius: 0;
+  }
+  .tx-main {
+    gap: 10px;
+    min-width: 0;
+  }
+  .tx-info {
+    min-width: 0;
+  }
+  .tx-desc {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+  }
+  .tx-amount {
+    font-size: 14px;
+    margin-right: 4px;
+  }
+  .tx-actions {
+    opacity: 1;
+    gap: 0;
+  }
+  .tx-actions .icon-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* 8. Planning View & Panels */
+  .planning-subnav-bar {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 6px;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+  }
+  .planning-subnav-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .planning-subnav-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .budget-kpi-banner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 12px;
+  }
+  .kpi-usage {
+    grid-column: 1 / -1;
+  }
+  .budget-cards-grid,
+  .savings-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .budget-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* 9. Guide View */
+  .guide-shortcut-card {
+    display: none;
+  }
+  .guide-hero-banner {
+    padding: 22px 16px;
+    margin-bottom: 16px;
+  }
+  .guide-hero-content h1 {
+    font-size: 26px;
+  }
+  .formula-cards-row {
+    grid-template-columns: 1fr;
+  }
+  .guide-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* 10. Modals & Bottom Sheets */
   .modal-sheet {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     max-width: 100%;
-    border-radius: 24px 24px 0 0;
-    max-height: 85vh;
-    padding: 20px 18px 30px;
+    border-radius: 20px 20px 0 0;
+    max-height: 88vh;
+    padding: 16px 16px calc(24px + env(safe-area-inset-bottom, 16px));
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sheet-handle {
+    display: block;
+    width: 38px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(0, 0, 0, 0.18);
+    margin: 0 auto 14px;
   }
   .tx-modal-layout {
     grid-template-columns: 1fr;
@@ -3440,21 +3780,11 @@ button, input, select, textarea {
     flex-direction: column;
     align-items: stretch;
   }
-  .sheet-handle {
-    display: block;
-  }
   .option-cards {
     grid-template-columns: 1fr;
   }
   .field-row {
     flex-direction: column;
     align-items: stretch;
-  }
-  .tx-summary {
-    flex-direction: column;
-    gap: 10px;
-  }
-  .tx-toolbar {
-    flex-direction: column;
   }
 }
