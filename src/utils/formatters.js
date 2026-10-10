@@ -26,7 +26,26 @@ export function dayGroupLabel(isoDate) {
 
 export function greeting(date = new Date()) {
   const hour = date.getHours()
-  return hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
+  const minute = date.getMinutes()
+  const totalMinutes = hour * 60 + minute
+
+  // Das 05:00 até 11:59 -> "Bom dia"
+  if (totalMinutes >= 5 * 60 && totalMinutes < 12 * 60) {
+    return 'Bom dia'
+  }
+
+  // Das 12:00 até 17:59 -> "Boa tarde"
+  if (totalMinutes >= 12 * 60 && totalMinutes < 18 * 60) {
+    return 'Boa tarde'
+  }
+
+  // Das 18:00 até 23:30 -> "Boa noite"
+  if (totalMinutes >= 18 * 60 && totalMinutes <= 23 * 60 + 30) {
+    return 'Boa noite'
+  }
+
+  // Acima de 23:30 até 04:59 (madrugada) -> "Olá"
+  return 'Olá'
 }
 
 /** Variação percentual arredondada, ou null quando não há base de comparação. */

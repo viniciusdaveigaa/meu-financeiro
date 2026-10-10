@@ -13,6 +13,7 @@ import {
   X
 } from 'lucide-react'
 import { supabase } from '../supabase'
+import { greeting } from '../utils/formatters'
 
 export function SettingsModal({
   currentName = '',
@@ -227,7 +228,7 @@ export function SettingsModal({
                 </p>
                 <div className="settings-preview-greeting">
                   <span className="preview-label">Como aparecerá na página inicial:</span>
-                  <strong>Bom dia, <span className="highlight-name">{firstName}</span>! 👋</strong>
+                  <strong>{greeting()}, <span className="highlight-name">{firstName}</span>! 👋</strong>
                 </div>
               </div>
 
