@@ -2,6 +2,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { usePrivacy } from '../context/PrivacyContext'
 import { useCategories } from '../context/CategoryContext'
 import { formatMoney } from '../utils/formatters'
+import { resolveBankLogo } from '../constants/bankLogos'
 
 /** Valor monetário que respeita o modo privacidade (barra cinza, como no Nubank). */
 export function Money({ value, prefix = '', className = '' }) {
@@ -80,3 +81,35 @@ export function Logo({ light = false }) {
     </span>
   )
 }
+
+/** Logotipo / Ícone visual de banco ou cartão de crédito. */
+export function BankLogoBadge({ logoId, accountName = '', kind = 'account', size = 32, className = '' }) {
+  const logo = resolveBankLogo(logoId, accountName, kind)
+  const Icon = logo.icon
+
+  return (
+    <span
+      className={`bank-logo-badge ${className}`}
+      style={{
+        width: size,
+        height: size,
+        background: logo.bg,
+        color: logo.color
+      }}
+      title={logo.name}
+      aria-label={logo.name}
+    >
+      {Icon ? (
+        <Icon size={Math.round(size * 0.52)} strokeWidth={2.2} />
+      ) : (
+        <span
+          className="bank-logo-text"
+          style={{ fontSize: Math.max(9, Math.round(size * 0.34)) }}
+        >
+          {logo.shortLabel}
+        </span>
+      )}
+    </span>
+  )
+}
+

@@ -28,6 +28,7 @@ import {
   dateInMonth,
   greeting
 } from './utils/formatters'
+import { getSavedAccountLogos, resolveBankLogo } from './constants/bankLogos'
 
 function calculateTotal(items, type) {
   return items
@@ -122,10 +123,17 @@ function MainDashboard({ session }) {
       }
 
       setAdvancedReady(!accountsRes.error && !recurringRes.error)
-      if (!accountsRes.error) setAccounts(accountsRes.data || [])
+      if (!accountsRes.error) {
+        const localLogos = getSavedAccountLogos(session.user.id)
+        const accountsWithLogos = (accountsRes.data || []).map((acc) => ({
+          ...acc,
+          logo: acc.logo || localLogos[acc.id] || resolveBankLogo('', acc.name, acc.kind).id
+        }))
+        setAccounts(accountsWithLogos)
+      }
     } catch {
       if (seq === loadSeqRef.current) {
-        setLoadError('Erro de conexão ao buscar dados.')
+        setLoadError('Não foi possível conectar ao banco de dados.')
       }
     } finally {
       if (seq === loadSeqRef.current) {
@@ -145,7 +153,11 @@ function MainDashboard({ session }) {
   useEffect(() => {
     const refresh = () => loadData()
     window.addEventListener('finance-data-changed', refresh)
-    return () => window.removeEventListener('finance-data-changed', refresh)
+    window.addEventListener('account-logos-changed', refresh)
+    return () => {
+      window.removeEventListener('finance-data-changed', refresh)
+      window.removeEventListener('account-logos-changed', refresh)
+    }
   }, [month])
 
   // Keyboard shortcut 'N' for new transaction
@@ -223,13 +235,14 @@ function MainDashboard({ session }) {
       !draft.installment_group_id &&
       Number(draft.installments) > 1
     ) {
-      const startMonth = draft.date.slice(0, 7)
+      const startMonth = draft.start_month || draft.date.slice(0, 7)
       const day = Number(draft.date.slice(-2))
       const groupId = crypto.randomUUID()
       const installmentData = {
         installment_group_id: groupId,
         installment_number: 1,
-        installment_total: Number(draft.installments)
+        installment_total: Number(draft.installments),
+        date: dateInMonth(startMonth, day)
       }
 
       result = await supabase
@@ -258,7 +271,7 @@ function MainDashboard({ session }) {
     }
     // 3. New transaction with installments
     else if (advancedReady && Number(draft.installments) > 1) {
-      const startMonth = draft.date.slice(0, 7)
+      const startMonth = draft.start_month || draft.date.slice(0, 7)
       const day = Number(draft.date.slice(-2))
       const groupId = crypto.randomUUID()
       const rows = Array.from({ length: Number(draft.installments) }, (_, idx) => ({
@@ -273,6 +286,9 @@ function MainDashboard({ session }) {
     }
     // 4. Regular new transaction
     else {
+      if (draft.start_month && draft.start_month !== draft.date?.slice(0, 7)) {
+        payload.date = dateInMonth(draft.start_month, Number(draft.date.slice(-2)))
+      }
       result = await supabase
         .from('transactions')
         .insert({ ...payload, user_id: session.user.id })

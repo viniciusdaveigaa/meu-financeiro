@@ -3,7 +3,7 @@ import { ArrowRight, CreditCard, Landmark, Pencil, Plus, ReceiptText, Search, Sl
 import { dayGroupLabel, searchableText } from '../utils/formatters'
 import { getCategoryLabel, getCategoryMeta } from '../constants/categories'
 import { useCategories } from '../context/CategoryContext'
-import { CategoryIcon, Money } from './ui'
+import { BankLogoBadge, CategoryIcon, Money } from './ui'
 
 const TYPE_FILTERS = [
   { id: 'all', label: 'Todos' },
@@ -204,8 +204,13 @@ export function TransactionList({ entries, accounts, loading, onEdit, onRemove, 
                             <span>{getMeta ? getMeta(item.category).label : getCategoryLabel(item.category)}</span>
                             {account && (
                               <span className="tx-account">
-                                {account.kind === 'card' ? <CreditCard size={12} /> : <Landmark size={12} />}
-                                {account.name}
+                                <BankLogoBadge
+                                  logoId={account.logo}
+                                  accountName={account.name}
+                                  kind={account.kind}
+                                  size={15}
+                                />
+                                <span>{account.name}</span>
                               </span>
                             )}
                             {neutral && <span className="tx-neutral">Não altera o saldo</span>}

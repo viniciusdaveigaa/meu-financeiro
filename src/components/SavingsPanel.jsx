@@ -99,16 +99,27 @@ export function SavingsPanel() {
 
   const removeBox = async (id, boxName) => {
     const confirmed = await dialog.confirm(
-      `A caixinha “${boxName}” e o histórico de aportes serão excluídos. Os lançamentos do extrato serão mantidos.`,
-      { title: 'Excluir esta caixinha?', confirmLabel: 'Sim, excluir' }
+      `Ao excluir a caixinha “${boxName}”, todos os aportes feitos nela serão deletados do extrato e o saldo será retornado para sua conta. Deseja continuar?`,
+      { title: 'Excluir caixinha e estornar saldo?', confirmLabel: 'Sim, excluir e estornar' }
     )
     if (!confirmed) return
 
+    // 1. Exclui os lançamentos associados desta caixinha no extrato financeiro
+    await supabase
+      .from('transactions')
+      .delete()
+      .eq('category', 'Caixinha')
+      .or(`description.eq.Reserva: ${boxName},description.ilike.Reserva: ${boxName}%`)
+
+    // 2. Exclui a caixinha (o banco faz cascade automático em savings_contributions)
     const { error } = await supabase.from('savings_boxes').delete().eq('id', id)
     if (error) {
       return dialog.alert(error.message, { title: 'Falha ao excluir caixinha' })
     }
-    load()
+
+    // 3. Atualiza dados locais e notifica todo o app para recalcular saldo e extrato
+    await load()
+    window.dispatchEvent(new Event('finance-data-changed'))
   }
 
   if (!ready) {

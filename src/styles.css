@@ -2169,6 +2169,63 @@ button, input, select, textarea {
   font-size: 13px;
 }
 
+.account-logo-select {
+  max-width: 180px;
+  cursor: pointer;
+}
+
+/* =========================================================
+   BANK LOGOS & ACCOUNT BADGES
+   ========================================================= */
+.bank-logo-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-weight: 700;
+  flex-shrink: 0;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.bank-logo-text {
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.tx-account {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tx-account .bank-logo-badge {
+  border-radius: 4px;
+}
+
+/* =========================================================
+   RECURRING ADJUST MODAL
+   ========================================================= */
+.recurring-adjust-sheet {
+  max-width: 520px;
+  width: 100%;
+}
+
+.recurring-adjust-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.adjust-two-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
 /* =========================================================
    CATEGORY MANAGER
    ========================================================= */
@@ -2765,6 +2822,110 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.installment-box-v2 {
+  background: var(--bg-subtle, #f6f8fa);
+  border: 1px solid var(--border-light, #e2e8f0);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.installment-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stepper-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stepper-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.installment-total-block {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.installment-total-block .total-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.installment-total-block .total-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--emerald-800, #064e3b);
+}
+
+.installment-invoice-picker {
+  border-top: 1px dashed var(--border-light, #e2e8f0);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.invoice-picker-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+}
+
+.invoice-pills-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.invoice-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: #fff;
+  border: 1.5px solid var(--border-light, #cbd5e1);
+  border-radius: 8px;
+  color: var(--text-secondary, #475569);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.invoice-pill:hover {
+  border-color: var(--emerald-500, #10b981);
+  background: #f8fafc;
+}
+
+.invoice-pill.active {
+  background: #ecfdf5;
+  border-color: var(--emerald-600, #059669);
+  color: var(--emerald-800, #065f46);
+  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.15);
+}
+
+.invoice-hint-text {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted, #64748b);
+  margin: 0;
 }
 
 .stepper {
@@ -3875,35 +4036,35 @@ button, input, select, textarea {
   }
 
   .account-edit-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
-    padding: 10px;
+    padding: 12px;
   }
-  .account-edit-row input {
-    grid-column: 1 / -1;
+  .account-edit-row input,
+  .account-edit-row select {
     width: 100%;
     box-sizing: border-box;
-    height: 38px;
-  }
-  .account-edit-row select {
-    grid-column: 1;
-    height: 38px;
-    box-sizing: border-box;
+    height: 40px;
+    max-width: none;
   }
   .account-edit-row .acc-actions-group {
-    grid-column: 2;
     display: flex;
-    gap: 6px;
-    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
   }
   .account-edit-row .acc-actions-group .btn {
     height: 38px;
-    width: 38px;
+    padding: 0 16px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
+  }
+
+  .adjust-two-cols,
+  .invoice-pills-row {
+    grid-template-columns: 1fr;
   }
 
   .recurring-row-card {

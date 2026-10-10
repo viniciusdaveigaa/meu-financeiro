@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   ArrowDownRight,
   ArrowUpRight,
+  Calendar,
   Check,
   Layers,
   Minus,
@@ -12,8 +13,10 @@ import {
 } from 'lucide-react'
 import {
   amountToInput,
+  changeMonth,
   formatAmountInput,
   formatMoney,
+  formatMonthName,
   inputToAmount,
   localISODate
 } from '../utils/formatters'
@@ -46,6 +49,7 @@ export function TransactionModal({
           amount: amountToInput(entry.amount),
           installment: Number(entry.installment_total) > 1,
           installments: Number(entry.installment_total) > 1 ? Number(entry.installment_total) : 1,
+          start_month: entry.date ? entry.date.slice(0, 7) : today.slice(0, 7),
           recurring: false
         }
       : {
@@ -56,7 +60,8 @@ export function TransactionModal({
           date: today,
           account_id: '',
           installment: false,
-          installments: 1,
+          installments: 2,
+          start_month: today.slice(0, 7),
           recurring: false
         }
   )
@@ -401,36 +406,79 @@ export function TransactionModal({
                 </div>
               )}
 
-              {draft.installment && (
-                <div className="installment-box">
-                  <div className="stepper" aria-label="Número de parcelas">
-                    <button
-                      type="button"
-                      onClick={() => set({ installments: Math.max(installments - 1, 2) })}
-                      disabled={lockedInstallment || installments <= 2}
-                      aria-label="Menos parcelas"
-                    >
-                      <Minus size={16} />
-                    </button>
-                    <span><b>{installments}</b>x</span>
-                    <button
-                      type="button"
-                      onClick={() => set({ installments: Math.min(installments + 1, 48) })}
-                      disabled={lockedInstallment || installments >= 48}
-                      aria-label="Mais parcelas"
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                  <p>
-                    {amountValue > 0 ? (
-                      <>Total da compra: <b>{formatMoney(amountValue * installments)}</b></>
-                    ) : (
-                      'Informe o valor de cada parcela.'
+              {draft.installment && (() => {
+                const purchaseMonth = draft.date ? draft.date.slice(0, 7) : today.slice(0, 7)
+                const nextInvoiceMonth = changeMonth(purchaseMonth, 1)
+                const effectiveStartMonth = draft.start_month || purchaseMonth
+                return (
+                  <div className="installment-box-v2">
+                    <div className="installment-top-row">
+                      <div className="stepper-wrap">
+                        <span className="stepper-label">Qtd. de parcelas:</span>
+                        <div className="stepper" aria-label="Número de parcelas">
+                          <button
+                            type="button"
+                            onClick={() => set({ installments: Math.max(installments - 1, 1) })}
+                            disabled={lockedInstallment || installments <= 1}
+                            aria-label="Menos parcelas"
+                          >
+                            <Minus size={16} />
+                          </button>
+                          <span><b>{installments}</b>x</span>
+                          <button
+                            type="button"
+                            onClick={() => set({ installments: Math.min(installments + 1, 48) })}
+                            disabled={lockedInstallment || installments >= 48}
+                            aria-label="Mais parcelas"
+                          >
+                            <Plus size={16} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="installment-total-block">
+                        <span className="total-label">Total da compra</span>
+                        <strong className="total-val">
+                          {amountValue > 0
+                            ? formatMoney(amountValue * installments)
+                            : 'R$ 0,00'}
+                        </strong>
+                      </div>
+                    </div>
+
+                    {!lockedInstallment && (
+                      <div className="installment-invoice-picker">
+                        <span className="invoice-picker-title">
+                          Quando vem a 1ª parcela / cobrança?
+                        </span>
+                        <div className="invoice-pills-row">
+                          <button
+                            type="button"
+                            className={`invoice-pill ${effectiveStartMonth === purchaseMonth ? 'active' : ''}`}
+                            onClick={() => set({ start_month: purchaseMonth })}
+                          >
+                            <Calendar size={13} />
+                            <span>Fatura deste mês ({formatMonthName(purchaseMonth)})</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`invoice-pill ${effectiveStartMonth === nextInvoiceMonth ? 'active' : ''}`}
+                            onClick={() => set({ start_month: nextInvoiceMonth })}
+                          >
+                            <Calendar size={13} />
+                            <span>Próxima fatura ({formatMonthName(nextInvoiceMonth)})</span>
+                          </button>
+                        </div>
+                        <p className="invoice-hint-text">
+                          {effectiveStartMonth === nextInvoiceMonth
+                            ? `A 1ª parcela virá em ${formatMonthName(nextInvoiceMonth)}, e as demais nos meses seguintes.`
+                            : `A 1ª parcela virá ainda este mês (${formatMonthName(purchaseMonth)}). Se a fatura atual já fechou, clique em "Próxima fatura".`}
+                        </p>
+                      </div>
                     )}
-                  </p>
-                </div>
-              )}
+                  </div>
+                )
+              })()}
 
               {lockedInstallment && (
                 <p className="notice">
