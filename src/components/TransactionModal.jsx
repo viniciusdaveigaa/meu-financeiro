@@ -86,18 +86,18 @@ export function TransactionModal({
   const installments = Math.min(Math.max(Number(draft.installments) || 2, 2), 48)
   const lockedInstallment = Boolean(draft.installment_group_id)
 
-  const handleQuickAddCat = (e) => {
+  const handleQuickAddCat = async (e) => {
     e.preventDefault()
     if (!newCatName.trim()) return
 
-    const result = addCategory({
+    const result = await addCategory({
       name: newCatName.trim(),
       iconName: newCatIcon,
       color: newCatColor.color,
       bg: newCatColor.bg
     })
 
-    if (result.error) {
+    if (result?.error) {
       dialog.alert(result.error, { title: 'Atenção' })
       return
     }

@@ -16,7 +16,7 @@ export function CategoryManager() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault()
     setFormError('')
 
@@ -26,7 +26,7 @@ export function CategoryManager() {
     }
 
     setSaving(true)
-    const result = addCategory({
+    const result = await addCategory({
       name: name.trim(),
       iconName: selectedIcon,
       color: selectedColor.color,
@@ -34,7 +34,7 @@ export function CategoryManager() {
     })
     setSaving(false)
 
-    if (result.error) {
+    if (result?.error) {
       setFormError(result.error)
       return
     }
@@ -51,7 +51,7 @@ export function CategoryManager() {
       { title: 'Remover categoria?', confirmLabel: 'Sim, remover' }
     )
     if (!confirmed) return
-    deleteCategory(category.id)
+    await deleteCategory(category.id)
   }
 
   const PreviewIcon = iconCatalog[selectedIcon]?.icon || Tag
