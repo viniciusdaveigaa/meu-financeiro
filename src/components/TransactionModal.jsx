@@ -26,6 +26,7 @@ import {
 import { colorPalette, iconCatalog } from '../constants/categories'
 import { useCategories } from '../context/CategoryContext'
 import { useAppDialog } from './Dialog'
+import { BankLogoBadge } from './ui'
 
 export function TransactionModal({
   entry,
@@ -286,7 +287,17 @@ export function TransactionModal({
                 const selectedAccount = accounts?.find((a) => a.id === draft.account_id)
                 return (
                   <div className="field">
-                    <span>Conta ou cartão</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {selectedAccount && (
+                        <BankLogoBadge
+                          logoId={selectedAccount.logo}
+                          accountName={selectedAccount.name}
+                          kind={selectedAccount.kind}
+                          size={18}
+                        />
+                      )}
+                      Conta ou cartão
+                    </span>
                     <select
                       value={draft.account_id}
                       onChange={(event) => {

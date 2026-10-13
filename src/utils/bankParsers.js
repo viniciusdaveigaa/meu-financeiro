@@ -200,6 +200,87 @@ export const BANK_CONFIGS = [
     detectPattern: (header) => header.includes('santander') || (header.includes('docto') && header.includes('saldo'))
   },
   {
+    id: 'mercadopago',
+    name: 'Mercado Pago',
+    logoId: 'mercadopago',
+    defaultDelimiter: ',',
+    acceptedExtensions: '.csv',
+    tips: 'No app Mercado Pago: Atividades > Baixar relatório de extrato CSV.',
+    detectPattern: (header) => header.includes('mercadopago') || header.includes('mercado pago')
+  },
+  {
+    id: 'picpay',
+    name: 'PicPay',
+    logoId: 'picpay',
+    defaultDelimiter: ';',
+    acceptedExtensions: '.csv',
+    tips: 'No app PicPay: Extrato > Exportar extrato > CSV.',
+    detectPattern: (header) => header.includes('picpay') || header.includes('pic pay')
+  },
+  {
+    id: 'btg',
+    name: 'BTG Pactual',
+    logoId: 'btg',
+    defaultDelimiter: ';',
+    acceptedExtensions: '.csv',
+    tips: 'No Internet Banking BTG: Conta > Extrato > Exportar em planilha CSV.',
+    detectPattern: (header) => header.includes('btg') || header.includes('pactual')
+  },
+  {
+    id: 'pagbank',
+    name: 'PagBank / PagSeguro',
+    logoId: 'pagbank',
+    defaultDelimiter: ';',
+    acceptedExtensions: '.csv',
+    tips: 'Na conta PagBank: Extrato da conta > Exportar em CSV.',
+    detectPattern: (header) => header.includes('pagbank') || header.includes('pagseguro')
+  },
+  {
+    id: 'sicoob',
+    name: 'Sicoob',
+    logoId: 'sicoob',
+    defaultDelimiter: ';',
+    acceptedExtensions: '.csv',
+    tips: 'No SicoobNet: Conta Corrente > Extrato > Exportar > CSV.',
+    detectPattern: (header) => header.includes('sicoob')
+  },
+  {
+    id: 'sicredi',
+    name: 'Sicredi',
+    logoId: 'sicredi',
+    defaultDelimiter: ';',
+    acceptedExtensions: '.csv',
+    tips: 'No Internet Banking Sicredi: Extrato > Baixar > Planilha CSV.',
+    detectPattern: (header) => header.includes('sicredi')
+  },
+  {
+    id: 'safra',
+    name: 'Banco Safra',
+    logoId: 'safra',
+    defaultDelimiter: ';',
+    acceptedExtensions: '.csv',
+    tips: 'No SafraNet: Extrato > Download em formato CSV.',
+    detectPattern: (header) => header.includes('safra')
+  },
+  {
+    id: 'xp',
+    name: 'XP Investimentos',
+    logoId: 'xp',
+    defaultDelimiter: ';',
+    acceptedExtensions: '.csv',
+    tips: 'No portal XP: Conta Digital / Investimentos > Extrato > Exportar CSV.',
+    detectPattern: (header) => header.includes('xp investimentos') || (header.includes('xp') && header.includes('extrato'))
+  },
+  {
+    id: 'pan',
+    name: 'Banco Pan',
+    logoId: 'pan',
+    defaultDelimiter: ';',
+    acceptedExtensions: '.csv',
+    tips: 'No app do Banco Pan: Conta > Extrato > Compartilhar ou Exportar CSV.',
+    detectPattern: (header) => header.includes('banco pan') || header.includes('panamericano')
+  },
+  {
     id: 'generic',
     name: 'Outro Banco / Genérico',
     logoId: 'banco',

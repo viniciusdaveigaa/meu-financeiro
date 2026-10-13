@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { usePrivacy } from '../context/PrivacyContext'
 import { useCategories } from '../context/CategoryContext'
@@ -82,32 +83,38 @@ export function Logo({ light = false }) {
   )
 }
 
-/** Logotipo / Ícone visual de banco ou cartão de crédito. */
+/** Logotipo / Ícone visual oficial de banco ou cartão de crédito. */
 export function BankLogoBadge({ logoId, accountName = '', kind = 'account', size = 32, className = '' }) {
+  const [imgError, setImgError] = useState(false)
   const logo = resolveBankLogo(logoId, accountName, kind)
-  const SvgComp = logo.SvgComponent
-  const Icon = logo.icon
+
+  useEffect(() => {
+    setImgError(false)
+  }, [logo?.id, logo?.logoUrl])
+
+  const hasLogoUrl = Boolean(logo?.logoUrl && !imgError)
+  const Icon = logo?.icon
 
   return (
     <span
-      className={`bank-logo-badge ${className}`}
+      className={`bank-logo-badge ${hasLogoUrl ? 'has-logo-img' : ''} ${className}`}
       style={{
         width: size,
         height: size,
-        background: SvgComp ? 'transparent' : logo.bg,
-        color: logo.color,
-        borderRadius: Math.round(size * 0.28),
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-        flexShrink: 0
+        borderRadius: Math.round(size * 0.26),
+        ...(!hasLogoUrl && logo?.bg ? { background: logo.bg, color: logo.color } : {})
       }}
-      title={logo.name}
-      aria-label={logo.name}
+      title={logo?.name || 'Instituição Bancária'}
+      aria-label={logo?.name || 'Instituição Bancária'}
     >
-      {SvgComp ? (
-        <SvgComp size={size} />
+      {hasLogoUrl ? (
+        <img
+          src={logo.logoUrl}
+          alt={logo.displayName || logo.name}
+          className="bank-logo-img"
+          loading="lazy"
+          onError={() => setImgError(true)}
+        />
       ) : Icon ? (
         <Icon size={Math.round(size * 0.52)} strokeWidth={2.2} />
       ) : (
@@ -115,7 +122,7 @@ export function BankLogoBadge({ logoId, accountName = '', kind = 'account', size
           className="bank-logo-text"
           style={{ fontSize: Math.max(9, Math.round(size * 0.34)) }}
         >
-          {logo.shortLabel}
+          {logo?.shortLabel || logo?.name?.slice(0, 3) || 'BCO'}
         </span>
       )}
     </span>

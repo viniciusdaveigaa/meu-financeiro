@@ -1,4 +1,3 @@
-import React from 'react'
 import {
   CreditCard,
   Landmark,
@@ -6,483 +5,411 @@ import {
   TrendingUp,
   Wallet
 } from 'lucide-react'
+import { findBank as findBankInDirectory } from 'logos-bancos-br'
 
-// Vetores SVG oficiais e de alta precisão para as instituições financeiras brasileiras
-export const NubankSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#820AD1" />
-    <path
-      d="M12 28V15.5C12 13.5 13.5 12 15.5 12C17.5 12 19 13.5 19 15.5V28M19 20C19.5 15.5 22.5 12 26 12C28.2 12 29.5 13.5 29.5 15.5V28"
-      stroke="#FFFFFF"
-      strokeWidth="3.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-)
-
-export const InterSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#FF7A00" />
-    <path
-      d="M14 12H20C24.4 12 28 15.6 28 20C28 24.4 24.4 28 20 28H14"
-      stroke="#FFFFFF"
-      strokeWidth="3.6"
-      strokeLinecap="round"
-    />
-    <path
-      d="M14 17H19C20.6 17 22 18.3 22 20C22 21.6 20.6 23 19 23H14"
-      stroke="#FFFFFF"
-      strokeWidth="3.2"
-      strokeLinecap="round"
-    />
-  </svg>
-)
-
-export const ItauSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#EC7000" />
-    <rect x="8" y="9" width="24" height="22" rx="6" fill="#003399" />
-    <path
-      d="M12 14V26M18 18V26M18 14V15M24 18V22C24 24.2 25.8 26 28 26V18"
-      stroke="#FFD100"
-      strokeWidth="2.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-)
-
-export const BradescoSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#CC092F" />
-    <path
-      d="M20 11V28M14 28C14 21 16.5 16 20 16C23.5 16 26 21 26 28"
-      stroke="#FFFFFF"
-      strokeWidth="3"
-      strokeLinecap="round"
-    />
-    <path
-      d="M9 28C9 18 13.5 11 20 11C26.5 11 31 18 31 28"
-      stroke="#FFFFFF"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-    />
-    <rect x="17.5" y="8" width="5" height="3" rx="1.5" fill="#FFFFFF" />
-  </svg>
-)
-
-export const SantanderSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#EC0000" />
-    {/* Três labaredas do Santander */}
-    <path
-      d="M20 9C20.5 13 24 16 25 21C25.8 25 23.5 28 20 28C16.5 28 14.2 25 15 21C16 16 19.5 13 20 9Z"
-      fill="#FFFFFF"
-    />
-    <path
-      d="M15 15C15.4 18 17.5 20.5 18 24C18.5 26.5 17 28 15 28C13 28 11.5 26 12 24C12.7 20.5 14.5 18 15 15Z"
-      fill="#FFFFFF"
-    />
-    <path
-      d="M25 15C24.6 18 22.5 20.5 22 24C21.5 26.5 23 28 25 28C27 28 28.5 26 28 24C27.3 20.5 25.5 18 25 15Z"
-      fill="#FFFFFF"
-    />
-  </svg>
-)
-
-export const CaixaSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#005CA9" />
-    {/* X estilizado da Caixa com azul e laranja */}
-    <path
-      d="M11 11L18 20L11 29H16L20 23.5L24 29H29L22 20L29 11H24L20 16.5L16 11H11Z"
-      fill="#FFFFFF"
-    />
-    <path
-      d="M17.5 17L22.5 23H26.5L21.5 17H17.5Z"
-      fill="#F37021"
-    />
-  </svg>
-)
-
-export const BBSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#0038A8" />
-    {/* Laços e losangos amarelos do Banco do Brasil */}
-    <g transform="translate(8, 8) scale(0.6)">
-      <path
-        d="M20 2L35 15L20 28L5 15L20 2Z"
-        stroke="#FCDB00"
-        strokeWidth="4"
-        fill="none"
-      />
-      <path
-        d="M20 10L29 18L20 26L11 18L20 10Z"
-        fill="#FCDB00"
-      />
-      <path
-        d="M2 20L15 35L28 20"
-        stroke="#FCDB00"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <path
-        d="M38 20L25 5L12 20"
-        stroke="#FCDB00"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-    </g>
-  </svg>
-)
-
-export const C6Svg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#1A1A1A" />
-    <circle cx="23" cy="22" r="7" stroke="#FFFFFF" strokeWidth="3" />
-    <path
-      d="M23 15C19 15 16 18 16 22"
-      stroke="#FFFFFF"
-      strokeWidth="3"
-      strokeLinecap="round"
-    />
-    <path
-      d="M14 14C11.5 16.5 11 20 12.5 23.5C14 27 17.5 28.5 21 28"
-      stroke="#E5B048"
-      strokeWidth="2.8"
-      strokeLinecap="round"
-    />
-  </svg>
-)
-
-export const MercadoPagoSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#009EE3" />
-    {/* Duas mãos se cumprimentando */}
-    <path
-      d="M11 21C11 21 14 17 17 19C20 21 22 21 24 19L27 22C24 25 21 24 19 23C17 22 15 24 13 25L11 21Z"
-      fill="#FFFFFF"
-    />
-    <path
-      d="M29 19C29 19 26 15 23 17C20 19 18 19 16 17L13 20C16 23 19 22 21 21C23 20 25 22 27 23L29 19Z"
-      fill="#FFFFFF"
-    />
-  </svg>
-)
-
-export const PicPaySvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#11C76F" />
-    <path
-      d="M14 29V11H21C24.5 11 27 13.5 27 17C27 20.5 24.5 23 21 23H18.5V29H14ZM18.5 19H21C22.2 19 23 18.2 23 17C23 15.8 22.2 15 21 15H18.5V19Z"
-      fill="#FFFFFF"
-    />
-  </svg>
-)
-
-export const BTGSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#0B2240" />
-    <path
-      d="M13 13H19C21.5 13 23 14.5 23 16.5C23 18 22 19 20.5 19.5C22.5 20 23.5 21.5 23.5 23.5C23.5 25.8 21.5 27 19 27H13V13Z"
-      stroke="#FFFFFF"
-      strokeWidth="2.5"
-    />
-    <path d="M26 13V27M23 13H29" stroke="#B08D57" strokeWidth="2.5" strokeLinecap="round" />
-  </svg>
-)
-
-export const NeonSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#00B4D8" />
-    <path
-      d="M13 28V12L27 28V12"
-      stroke="#FFFFFF"
-      strokeWidth="3.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-)
-
-export const PagBankSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#00A868" />
-    <circle cx="20" cy="20" r="11" stroke="#FFFFFF" strokeWidth="2.6" fill="none" />
-    <path
-      d="M17 24V16H21C22.5 16 23.5 17 23.5 18.5C23.5 20 22.5 21 21 21H17"
-      stroke="#FFFFFF"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-    />
-    <circle cx="24" cy="22" r="1.5" fill="#FED100" />
-  </svg>
-)
-
-export const SicoobSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#003641" />
-    <path d="M20 10L27 20H13L20 10Z" fill="#00AE9D" />
-    <path d="M20 30L13 20H27L20 30Z" fill="#78BE20" />
-    <circle cx="20" cy="20" r="3" fill="#FFFFFF" />
-  </svg>
-)
-
-export const SicrediSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#007D40" />
-    <path
-      d="M20 12C20 16 16 20 12 20C16 20 20 24 20 28C20 24 24 20 28 20C24 20 20 16 20 12Z"
-      fill="#FFFFFF"
-    />
-  </svg>
-)
-
-export const SafraSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#102142" />
-    <path
-      d="M14 26C14 21 17 19 20 19C23 19 26 21 26 26M20 14V17"
-      stroke="#D4AF37"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-    />
-    <circle cx="20" cy="13" r="2" fill="#D4AF37" />
-  </svg>
-)
-
-export const XPSvg = ({ size = 24 }) => (
-  <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-    <rect width="40" height="40" rx="9" fill="#000000" />
-    <path
-      d="M13 14L20 26M20 14L13 26M21 14H27C28.5 14 29.5 15 29.5 16.5C29.5 18 28.5 19 27 19H22V26"
-      stroke="#FFFFFF"
-      strokeWidth="2.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-)
-
-// Catálogo Mestre de Instituições Financeiras com Códigos COMPE e SVGs Autênticos
+/**
+ * Catálogo Oficial de Instituições Financeiras Brasileiras
+ *
+ * Todas as logos foram obtidas de fontes institucionais autênticas
+ * (Open Finance Brasil e diretórios oficiais dos bancos via projeto logos-bancos-br).
+ * Nenhuma imagem é gerada por IA, desenho aproximado ou vetor improvisado.
+ */
 export const BANK_LOGOS = [
   {
     id: 'nubank',
     name: 'Nubank',
+    displayName: 'Nubank',
     code: '260',
+    ispb: '18236120',
     shortLabel: 'Nu',
+    logoUrl: '/bank-logos/nubank.svg',
+    pngUrl: '/bank-logos/png/18236120.png',
+    source: 'nuapp.nubank.com.br / Open Finance Brasil',
     color: '#820AD1',
     bg: '#F5EEFE',
-    SvgComponent: NubankSvg,
     aliases: ['nubank', 'nu', 'roxinho', 'nu pagamentos', 'nu financeiro']
   },
   {
     id: 'inter',
     name: 'Banco Inter',
+    displayName: 'Banco Inter',
     code: '077',
+    ispb: '00416968',
     shortLabel: 'Inter',
+    logoUrl: '/bank-logos/inter.svg',
+    pngUrl: '/bank-logos/png/00416968.png',
+    source: 'marketing.bancointer.com.br / Open Finance Brasil',
     color: '#FF7A00',
     bg: '#FFF4EA',
-    SvgComponent: InterSvg,
     aliases: ['inter', 'banco inter', 'intermedium', 'inter s.a.']
   },
   {
     id: 'itau',
     name: 'Itaú Unibanco',
+    displayName: 'Itaú',
     code: '341',
+    ispb: '60701190',
     shortLabel: 'Itaú',
+    logoUrl: '/bank-logos/itau.svg',
+    pngUrl: '/bank-logos/png/60701190.png',
+    source: 'itau.com.br / Open Finance Brasil',
     color: '#EC7000',
     bg: '#FFF3EB',
-    SvgComponent: ItauSvg,
     aliases: ['itau', 'itaú', 'unibanco', 'personnalite', 'personalite', 'itaucard']
   },
   {
     id: 'bradesco',
     name: 'Bradesco',
+    displayName: 'Bradesco',
     code: '237',
+    ispb: '60746948',
     shortLabel: 'Brad',
+    logoUrl: '/bank-logos/bradesco.svg',
+    pngUrl: '/bank-logos/png/60746948.png',
+    source: 'banco.bradesco / Open Finance Brasil',
     color: '#CC092F',
     bg: '#FDF0F2',
-    SvgComponent: BradescoSvg,
     aliases: ['bradesco', 'banco bradesco', 'next', 'prime']
   },
   {
     id: 'santander',
     name: 'Santander',
+    displayName: 'Santander',
     code: '033',
+    ispb: '90400888',
     shortLabel: 'Sant',
+    logoUrl: '/bank-logos/santander.svg',
+    pngUrl: '/bank-logos/png/90400888.png',
+    source: 'santander.com.br / Open Finance Brasil',
     color: '#EC0000',
     bg: '#FEF0F0',
-    SvgComponent: SantanderSvg,
     aliases: ['santander', 'banco santander', 'select', 'van gogh']
   },
   {
     id: 'caixa',
     name: 'Caixa Econômica Federal',
+    displayName: 'Caixa',
     code: '104',
+    ispb: '00360305',
     shortLabel: 'CEF',
+    logoUrl: '/bank-logos/caixa.svg',
+    pngUrl: '/bank-logos/png/00360305.png',
+    source: 'caixa.gov.br / Open Finance Brasil',
     color: '#005CA9',
     bg: '#EEF6FC',
-    SvgComponent: CaixaSvg,
     aliases: ['caixa', 'cef', 'economica', 'poupança caixa', 'caixa federal']
   },
   {
     id: 'bb',
     name: 'Banco do Brasil',
+    displayName: 'Banco do Brasil',
     code: '001',
+    ispb: '00000000',
     shortLabel: 'BB',
+    logoUrl: '/bank-logos/banco-do-brasil.svg',
+    pngUrl: '/bank-logos/png/00000000.png',
+    source: 'bb.com.br / Open Finance Brasil',
     color: '#0038A8',
     bg: '#EFF4FC',
-    SvgComponent: BBSvg,
-    aliases: ['bb', 'banco do brasil', 'ourocard', 'estilo bb']
+    aliases: ['bb', 'banco do brasil', 'ourocard', 'estilo bb', 'brasil']
   },
   {
     id: 'c6',
     name: 'C6 Bank',
+    displayName: 'C6 Bank',
     code: '336',
+    ispb: '31872495',
     shortLabel: 'C6',
+    logoUrl: '/bank-logos/c6-bank.svg',
+    pngUrl: '/bank-logos/png/31872495.png',
+    source: 'c6bank.com.br / Open Finance Brasil',
     color: '#1A1A1A',
     bg: '#F2F2F2',
-    SvgComponent: C6Svg,
     aliases: ['c6', 'c6 bank', 'c6bank']
   },
   {
     id: 'mercadopago',
     name: 'Mercado Pago',
+    displayName: 'Mercado Pago',
     code: '323',
+    ispb: '10573521',
     shortLabel: 'MP',
+    logoUrl: '/bank-logos/mercado-pago.svg',
+    pngUrl: '/bank-logos/png/10573521.png',
+    source: 'mercadolivre.com / mlstatic.com / Open Finance Brasil',
     color: '#009EE3',
     bg: '#EDF8FD',
-    SvgComponent: MercadoPagoSvg,
     aliases: ['mercado pago', 'mercadopago', 'mp', 'mercado livre']
   },
   {
     id: 'picpay',
     name: 'PicPay',
+    displayName: 'PicPay',
     code: '380',
+    ispb: '22896431',
     shortLabel: 'Pic',
+    logoUrl: '/bank-logos/picpay.svg',
+    pngUrl: '/bank-logos/png/22896431.png',
+    source: 'picpay.com / Open Finance Brasil',
     color: '#11C76F',
     bg: '#EFFBF4',
-    SvgComponent: PicPaySvg,
     aliases: ['picpay', 'pic pay', 'original']
   },
   {
     id: 'btg',
     name: 'BTG Pactual',
+    displayName: 'BTG Pactual',
     code: '208',
+    ispb: '30306294',
     shortLabel: 'BTG',
+    logoUrl: '/bank-logos/btg-pactual.svg',
+    pngUrl: '/bank-logos/png/30306294.png',
+    source: 'btgpactual.com / Open Finance Brasil',
     color: '#0B2240',
     bg: '#EDF1F7',
-    SvgComponent: BTGSvg,
     aliases: ['btg', 'btg pactual', 'pactual']
   },
   {
     id: 'neon',
     name: 'Neon Pagamentos',
-    code: '735',
+    displayName: 'Neon',
+    code: '536',
+    ispb: '20855875',
     shortLabel: 'Neon',
+    logoUrl: '/bank-logos/neon.svg',
+    pngUrl: '/bank-logos/png/20855875.png',
+    source: 'neon.com.br / Open Finance Brasil',
     color: '#00B4D8',
     bg: '#EAF9FD',
-    SvgComponent: NeonSvg,
-    aliases: ['neon', 'banco neon']
+    aliases: ['neon', 'banco neon', '735']
   },
   {
     id: 'pagbank',
     name: 'PagBank / PagSeguro',
+    displayName: 'PagBank',
     code: '290',
+    ispb: '08561701',
     shortLabel: 'Pag',
+    logoUrl: '/bank-logos/pagbank.svg',
+    pngUrl: '/bank-logos/png/08561701.png',
+    source: 'pagseguro.uol.com.br / Open Finance Brasil',
     color: '#00A868',
     bg: '#EDFBF4',
-    SvgComponent: PagBankSvg,
     aliases: ['pagbank', 'pagseguro', 'pag bank', 'pag seguro']
   },
   {
     id: 'sicoob',
     name: 'Sicoob',
+    displayName: 'Sicoob',
     code: '756',
+    ispb: '02038232',
     shortLabel: 'Sicoob',
+    logoUrl: '/bank-logos/sicoob.svg',
+    pngUrl: '/bank-logos/png/02038232.png',
+    source: 'sicoob.com.br / Open Finance Brasil',
     color: '#003641',
     bg: '#E6F4F6',
-    SvgComponent: SicoobSvg,
     aliases: ['sicoob', 'bancoob']
   },
   {
     id: 'sicredi',
     name: 'Sicredi',
+    displayName: 'Sicredi',
     code: '748',
+    ispb: '01181521',
     shortLabel: 'Sicredi',
+    logoUrl: '/bank-logos/sicredi.svg',
+    pngUrl: '/bank-logos/png/01181521.png',
+    source: 'sicredi.com.br / Open Finance Brasil',
     color: '#007D40',
     bg: '#EAF7EE',
-    SvgComponent: SicrediSvg,
     aliases: ['sicredi', 'bansicredi']
   },
   {
     id: 'safra',
     name: 'Banco Safra',
+    displayName: 'Safra',
     code: '422',
+    ispb: '58160789',
     shortLabel: 'Safra',
+    logoUrl: '/bank-logos/safra.svg',
+    pngUrl: '/bank-logos/png/58160789.png',
+    source: 'safra.com.br / Open Finance Brasil',
     color: '#102142',
     bg: '#EEF2F9',
-    SvgComponent: SafraSvg,
     aliases: ['safra', 'banco safra']
   },
   {
     id: 'xp',
     name: 'XP Investimentos',
-    code: '102',
+    displayName: 'XP Investimentos',
+    code: '348',
+    ispb: '33264668',
     shortLabel: 'XP',
+    logoUrl: '/bank-logos/xp.svg',
+    pngUrl: '/bank-logos/png/33264668.png',
+    source: 'xpi.com.br / Open Finance Brasil',
     color: '#000000',
     bg: '#FFF8EE',
-    SvgComponent: XPSvg,
-    aliases: ['xp', 'xp investimentos', 'rico', 'clear']
+    aliases: ['xp', 'xp investimentos', 'rico', 'clear', '102']
+  },
+  {
+    id: 'pan',
+    name: 'Banco Pan',
+    displayName: 'Banco Pan',
+    code: '623',
+    ispb: '59285411',
+    shortLabel: 'Pan',
+    logoUrl: '/bank-logos/banco-pan.svg',
+    pngUrl: '/bank-logos/png/59285411.png',
+    source: 'bancopan.com.br / Open Finance Brasil',
+    color: '#0066CC',
+    bg: '#E6F2FF',
+    aliases: ['pan', 'banco pan', 'panamericano']
+  },
+  {
+    id: 'banrisul',
+    name: 'Banrisul',
+    displayName: 'Banrisul',
+    code: '041',
+    ispb: '92702067',
+    shortLabel: 'Banri',
+    logoUrl: '/bank-logos/banrisul.svg',
+    pngUrl: '/bank-logos/png/92702067.png',
+    source: 'banrisul.com.br / Open Finance Brasil',
+    color: '#003399',
+    bg: '#EBF1FA',
+    aliases: ['banrisul', 'banco do estado do rio grande do sul']
+  },
+  {
+    id: 'bv',
+    name: 'Banco BV (Votorantim)',
+    displayName: 'Banco BV',
+    code: '655',
+    ispb: '59588111',
+    shortLabel: 'BV',
+    logoUrl: '/bank-logos/bv.svg',
+    pngUrl: '/bank-logos/png/59588111.png',
+    source: 'bv.com.br / Open Finance Brasil',
+    color: '#002E6E',
+    bg: '#EBF2FA',
+    aliases: ['bv', 'banco bv', 'votorantim', 'banco votorantim', '413']
+  },
+  {
+    id: 'crefisa',
+    name: 'Crefisa',
+    displayName: 'Crefisa',
+    code: '069',
+    ispb: '61033106',
+    shortLabel: 'Cref',
+    logoUrl: '/bank-logos/crefisa.svg',
+    pngUrl: '/bank-logos/png/61033106.png',
+    source: 'crefisa.com.br / Open Finance Brasil',
+    color: '#FFD100',
+    bg: '#FFFDE6',
+    aliases: ['crefisa', 'banco crefisa']
+  },
+  {
+    id: 'agibank',
+    name: 'Agibank',
+    displayName: 'Agibank',
+    code: '121',
+    ispb: '10664513',
+    shortLabel: 'Agi',
+    logoUrl: '/bank-logos/agibank.svg',
+    pngUrl: '/bank-logos/png/10664513.png',
+    source: 'agibank.com.br / Open Finance Brasil',
+    color: '#005696',
+    bg: '#E8F4FB',
+    aliases: ['agibank', 'agi']
+  },
+  {
+    id: 'brb',
+    name: 'BRB (Banco de Brasília)',
+    displayName: 'BRB',
+    code: '070',
+    ispb: '00000208',
+    shortLabel: 'BRB',
+    logoUrl: '/bank-logos/brb.svg',
+    pngUrl: '/bank-logos/png/00000208.png',
+    source: 'brb.com.br / Open Finance Brasil',
+    color: '#003366',
+    bg: '#E8F0F8',
+    aliases: ['brb', 'banco de brasilia', 'banco de brasília']
+  },
+  {
+    id: 'ailos',
+    name: 'Ailos Cooperativa',
+    displayName: 'Ailos',
+    code: '085',
+    ispb: '05463212',
+    shortLabel: 'Ailos',
+    logoUrl: '/bank-logos/ailos.svg',
+    pngUrl: '/bank-logos/png/05463212.png',
+    source: 'ailos.coop.br / Open Finance Brasil',
+    color: '#009688',
+    bg: '#E6F5F3',
+    aliases: ['ailos', 'viacredi']
   },
   {
     id: 'dinheiro',
     name: 'Dinheiro / Carteira',
+    displayName: 'Carteira (Dinheiro)',
     code: null,
+    ispb: null,
     shortLabel: 'Cash',
     icon: Wallet,
     color: '#10B981',
-    bg: '#ECFDF5'
+    bg: '#ECFDF5',
+    aliases: ['dinheiro', 'carteira', 'especie', 'espécie']
   },
   {
     id: 'cartao',
     name: 'Cartão de Crédito',
+    displayName: 'Cartão de Crédito',
     code: null,
+    ispb: null,
     shortLabel: 'Card',
     icon: CreditCard,
     color: '#6366F1',
-    bg: '#EEF2FF'
+    bg: '#EEF2FF',
+    aliases: ['cartao', 'cartão']
   },
   {
     id: 'banco',
     name: 'Conta Corrente / Outro Banco',
+    displayName: 'Outro Banco',
     code: null,
+    ispb: null,
     shortLabel: 'Bank',
     icon: Landmark,
     color: '#0284C7',
-    bg: '#F0F9FF'
+    bg: '#F0F9FF',
+    aliases: ['banco', 'conta corrente', 'outro']
   },
   {
     id: 'poupanca',
     name: 'Poupança / Reserva',
+    displayName: 'Poupança',
     code: null,
+    ispb: null,
     shortLabel: 'Poup',
     icon: PiggyBank,
     color: '#EC4899',
-    bg: '#FDF2F8'
+    bg: '#FDF2F8',
+    aliases: ['poupanca', 'poupança', 'reserva']
   },
   {
     id: 'investimento',
-    name: 'Investimentos',
+    name: 'Investimentos / Corretora',
+    displayName: 'Investimentos',
     code: null,
+    ispb: null,
     shortLabel: 'Inv',
     icon: TrendingUp,
     color: '#8B5CF6',
-    bg: '#F5F3FF'
+    bg: '#F5F3FF',
+    aliases: ['investimento', 'investimentos', 'corretora', 'cdb', 'ações', 'acoes']
   }
 ]
 
@@ -499,13 +426,12 @@ export function resolveBankLogo(logoId, accountName = '', kind = 'account', bank
 
   // 2. Busca por código de compensação bancária (COMPE)
   if (bankCode) {
-    const cleanCode = String(bankCode).padStart(3, '0')
-    const foundByCode = BANK_LOGOS.find((l) => l.code === cleanCode)
+    const foundByCode = findBankByCode(bankCode)
     if (foundByCode) return foundByCode
   }
 
   // 3. Busca inteligente por apelidos e palavras-chave no nome da conta
-  const nameNorm = accountName.toLowerCase().trim()
+  const nameNorm = (accountName || '').toLowerCase().trim()
   if (nameNorm) {
     for (const bank of BANK_LOGOS) {
       if (bank.aliases && bank.aliases.some((alias) => nameNorm.includes(alias))) {
@@ -524,17 +450,55 @@ export function resolveBankLogo(logoId, accountName = '', kind = 'account', bank
     }
   }
 
-  // 4. Fallback contextual seguro (nunca quebra nem associa incorretamente)
+  // 4. Fallback contextual seguro
   if (kind === 'card') {
     return BANK_LOGOS.find((l) => l.id === 'cartao')
   }
   return BANK_LOGOS.find((l) => l.id === 'banco')
 }
 
+/**
+ * Procura um banco pelo código COMPE, com suporte à busca estendida
+ * via diretório oficial do Banco Central (logos-bancos-br)
+ */
 export function findBankByCode(code) {
   if (!code) return null
-  const cleanCode = String(code).padStart(3, '0')
-  return BANK_LOGOS.find((l) => l.code === cleanCode) || null
+  const cleanCode = String(code).trim().padStart(3, '0')
+
+  // Procura no catálogo principal com arquivos locais otimizados
+  const curated = BANK_LOGOS.find((l) => l.code === cleanCode)
+  if (curated) return curated
+
+  // Busca estendida no diretório completo de instituições
+  try {
+    const bankDir = findBankInDirectory(cleanCode)
+    if (bankDir) {
+      const hasSvg = Boolean(bankDir.logo?.svg)
+      const hasPng = Boolean(bankDir.logo?.png)
+      const logoUrl = hasSvg
+        ? `/bank-logos/svg/${bankDir.ispb}.svg`
+        : hasPng
+          ? `/bank-logos/png/${bankDir.ispb}.png`
+          : null
+
+      return {
+        id: `compe-${cleanCode}`,
+        name: bankDir.displayName || bankDir.name,
+        displayName: bankDir.displayName || bankDir.shortName || bankDir.name,
+        code: cleanCode,
+        ispb: bankDir.ispb,
+        shortLabel: (bankDir.displayName || bankDir.shortName || 'BCO').slice(0, 4),
+        logoUrl,
+        pngUrl: hasPng ? `/bank-logos/png/${bankDir.ispb}.png` : null,
+        source: bankDir.logo?.source?.uri || 'Banco Central do Brasil / Open Finance Brasil',
+        color: '#1E293B',
+        bg: '#F1F5F9',
+        aliases: [cleanCode, (bankDir.displayName || '').toLowerCase()]
+      }
+    }
+  } catch {}
+
+  return null
 }
 
 const STORAGE_KEY_PREFIX = 'sc_account_logos'
