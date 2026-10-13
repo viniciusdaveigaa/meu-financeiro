@@ -21,7 +21,8 @@ import {
   BANK_CONFIGS,
   autoDetectBankFromHeader,
   parseBankCsv,
-  markDuplicateTransactions
+  markDuplicateTransactions,
+  cleanTransactionDescription
 } from '../utils/bankParsers'
 import { downloadSampleCsv } from '../utils/exportImport'
 import { formatMoney, formatDateLabel } from '../utils/formatters'
@@ -215,11 +216,11 @@ export function CsvImportModal({ accounts = [], entries = [], onClose, onImportS
       }
       const userId = authData.user.id
 
-      // Monta os registros finais
+      // Monta os registros finais com sanitização estrita de tamanho (máximo 120 caracteres)
       const payloadRows = rowsToImport.map((row) => ({
         user_id: userId,
         date: row.date,
-        description: row.description,
+        description: cleanTransactionDescription(row.description).slice(0, 120),
         amount: row.amount,
         type: row.type,
         category: row.category || 'Outros',
@@ -531,7 +532,7 @@ export function CsvImportModal({ accounts = [], entries = [], onClose, onImportS
                             />
                           </td>
                           <td className="cell-date">{formatDateLabel(row.date)}</td>
-                          <td className="cell-desc" title={row.description}>
+                          <td className="cell-desc" title={row.rawDescription || row.description}>
                             <strong>{row.description}</strong>
                           </td>
                           <td className="cell-cat">

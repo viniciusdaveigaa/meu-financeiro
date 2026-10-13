@@ -3,7 +3,7 @@ create table if not exists public.transactions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   type text not null check (type in ('income', 'expense')),
-  description text not null check (char_length(description) between 1 and 120),
+  description text not null check (char_length(trim(description)) between 1 and 255),
   amount numeric(12,2) not null check (amount > 0),
   affects_balance boolean not null default true,
   category text not null,

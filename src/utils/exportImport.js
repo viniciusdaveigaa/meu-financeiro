@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf'
 import { formatMoney, formatMonthName, formatDateLabel } from './formatters.js'
 import { getCategoryLabel } from '../constants/categories.js'
+import { cleanTransactionDescription } from './bankParsers.js'
 
 /**
  * Normaliza e limpa textos para o PDF mantendo compatibilidade de fontes
@@ -308,7 +309,7 @@ export function parseCsvText(rawText) {
 
     parsedRows.push({
       date,
-      description: rawDesc.slice(0, 100),
+      description: cleanTransactionDescription(rawDesc).slice(0, 120),
       amount: parsedAmount,
       type,
       category,

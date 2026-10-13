@@ -93,31 +93,155 @@ export function splitCsvRow(line, delimiter = ';') {
   return result
 }
 
+/**
+ * Normaliza e sanitiza a descrição da transação para exibição e gravação no banco de dados.
+ * Remove poluição de agência/conta/documentos longos de transferências bancárias/Pix (ex: Nubank)
+ * e garante que nunca ultrapasse o limite de caracteres do banco (120 caracteres).
+ */
+export function cleanTransactionDescription(rawDesc = '') {
+  if (!rawDesc || typeof rawDesc !== 'string') return 'Lançamento'
+  let desc = rawDesc.replace(/\s+/g, ' ').trim()
+
+  // 1. Limpeza específica de extratos Nubank Pix e transferências
+  // Exemplo: "Transferência recebida pelo Pix - SOELTECH DESENVOLVIMENTO - 80.090.244/0001-41 - BCO DO BRASIL S.A. (0001) Agência: 737 Conta: 16500-0"
+  // Resultado: "Transferência recebida pelo Pix - SOELTECH DESENVOLVIMENTO"
+  const pixMatch = desc.match(
+    /^(Transferência (?:recebida|enviada) pelo Pix|Reembolso (?:recebido|enviado) pelo Pix)\s*-\s*([^-]+?)(?:\s*\((?:Transferência|Pix)[^)]+\))?(?:\s*-\s*[\d\.\-\/•]+)?(?:\s*-\s*.+)?$/i
+  )
+  if (pixMatch) {
+    const action = pixMatch[1].trim()
+    let party = pixMatch[2].replace(/\s*\((?:transferência|pix)[^)]*\)/gi, '').trim()
+    if (party) {
+      desc = `${action} - ${party}`
+    }
+  }
+
+  // 2. Remove cauda técnica comum de agência/conta bancária se ainda estiver presente
+  desc = desc.replace(/\s*Agência:\s*\d+\s*Conta:\s*[\d\-]+/gi, '').trim()
+
+  // 3. Remove texto redundante como "(Transferência enviada)" ou "(Transferência recebida)"
+  desc = desc.replace(/\s*\((?:transferência|pix)\s+(?:enviada|recebida)\)/gi, '').trim()
+
+  // 4. Limita com segurança a no máximo 120 caracteres para garantir conformidade estrita com o banco
+  if (desc.length > 120) {
+    desc = desc.slice(0, 117).trim() + '...'
+  }
+
+  return desc || 'Lançamento'
+}
+
 // Heurística de categoria automática
 export function guessCategory(description = '') {
   const d = description.toLowerCase()
-  if (d.includes('mercado') || d.includes('supermercado') || d.includes('ifood') || d.includes('restaurante') || d.includes('padaria') || d.includes('cafe') || d.includes('lanche') || d.includes('pao de acucar') || d.includes('carrefour') || d.includes('assai')) {
+  if (
+    d.includes('mercado') ||
+    d.includes('supermercado') ||
+    d.includes('ifood') ||
+    d.includes('restaurante') ||
+    d.includes('padaria') ||
+    d.includes('cafe') ||
+    d.includes('lanche') ||
+    d.includes('pao de acucar') ||
+    d.includes('carrefour') ||
+    d.includes('assai') ||
+    d.includes('food')
+  ) {
     return 'Alimentacao'
   }
-  if (d.includes('uber') || d.includes('99') || d.includes('gasolina') || d.includes('posto') || d.includes('combustivel') || d.includes('estacionamento') || d.includes('pedagio') || d.includes('sem parar') || d.includes('veloe')) {
+  if (
+    d.includes('uber') ||
+    /\b99\b|99app|99pop|99taxi/.test(d) ||
+    d.includes('gasolina') ||
+    d.includes('posto') ||
+    d.includes('combustivel') ||
+    d.includes('estacionamento') ||
+    d.includes('pedagio') ||
+    d.includes('sem parar') ||
+    d.includes('veloe') ||
+    d.includes('autocenter') ||
+    d.includes('oficina')
+  ) {
     return 'Transporte'
   }
-  if (d.includes('farmacia') || d.includes('drogaria') || d.includes('medico') || d.includes('consulta') || d.includes('hospital') || d.includes('saude') || d.includes('dentista') || d.includes('raia') || d.includes('drogasil')) {
+  if (
+    d.includes('farmacia') ||
+    d.includes('drogaria') ||
+    d.includes('medico') ||
+    d.includes('consulta') ||
+    d.includes('hospital') ||
+    d.includes('saude') ||
+    d.includes('dentista') ||
+    d.includes('raia') ||
+    d.includes('drogasil')
+  ) {
     return 'Saude'
   }
-  if (d.includes('aluguel') || d.includes('condominio') || d.includes('luz') || d.includes('enel') || d.includes('agua') || d.includes('sabesp') || d.includes('gas') || d.includes('iptu') || d.includes('cpfl')) {
+  if (
+    d.includes('aluguel') ||
+    d.includes('condominio') ||
+    d.includes('luz') ||
+    d.includes('enel') ||
+    d.includes('agua') ||
+    d.includes('sabesp') ||
+    d.includes('gas') ||
+    d.includes('iptu') ||
+    d.includes('cpfl')
+  ) {
     return 'Moradia'
   }
-  if (d.includes('netflix') || d.includes('spotify') || d.includes('amazon') || d.includes('prime') || d.includes('disney') || d.includes('hbo') || d.includes('youtube') || d.includes('internet') || d.includes('claro') || d.includes('vivo') || d.includes('tim')) {
+  if (
+    d.includes('netflix') ||
+    d.includes('spotify') ||
+    d.includes('amazon') ||
+    d.includes('prime') ||
+    d.includes('disney') ||
+    d.includes('hbo') ||
+    d.includes('youtube') ||
+    d.includes('internet') ||
+    d.includes('claro') ||
+    d.includes('vivo') ||
+    d.includes('tim') ||
+    d.includes('telecom')
+  ) {
     return 'Assinaturas'
   }
-  if (d.includes('salario') || d.includes('remuneracao') || d.includes('pro-labore') || d.includes('rendimento') || d.includes('dividendo') || d.includes('pix recebido') || d.includes('ted recebida') || d.includes('deposito recebido')) {
+  if (
+    d.includes('salario') ||
+    d.includes('remuneracao') ||
+    d.includes('pro-labore') ||
+    d.includes('rendimento') ||
+    d.includes('dividendo') ||
+    d.includes('pix recebido') ||
+    d.includes('ted recebida') ||
+    d.includes('deposito recebido') ||
+    d.includes('recebida pelo pix') ||
+    d.includes('resgate rdb') ||
+    d.includes('reembolso')
+  ) {
     return 'Salario'
   }
-  if (d.includes('cinema') || d.includes('show') || d.includes('teatro') || d.includes('viagem') || d.includes('hotel') || d.includes('praia') || d.includes('lazer') || d.includes('airbnb') || d.includes('booking')) {
+  if (
+    d.includes('cinema') ||
+    d.includes('show') ||
+    d.includes('teatro') ||
+    d.includes('viagem') ||
+    d.includes('hotel') ||
+    d.includes('praia') ||
+    d.includes('lazer') ||
+    d.includes('airbnb') ||
+    d.includes('booking')
+  ) {
     return 'Lazer'
   }
-  if (d.includes('curso') || d.includes('escola') || d.includes('faculdade') || d.includes('livro') || d.includes('udemy') || d.includes('educacao') || d.includes('alura')) {
+  if (
+    d.includes('curso') ||
+    d.includes('escola') ||
+    d.includes('faculdade') ||
+    d.includes('livro') ||
+    d.includes('udemy') ||
+    d.includes('educacao') ||
+    d.includes('alura')
+  ) {
     return 'Educacao'
   }
   return 'Outros'
@@ -448,13 +572,16 @@ export function parseBankCsv(csvText, bankId = 'generic') {
       continue
     }
 
+    const cleanedDesc = cleanTransactionDescription(rawDesc)
+
     validRows.push({
       id: `temp_${i}_${Date.now()}`,
       date: parsedDate,
-      description: rawDesc.replace(/\s+/g, ' ').trim(),
+      description: cleanedDesc,
+      rawDescription: rawDesc.replace(/\s+/g, ' ').trim(),
       amount: parsedAmount,
       type: detectedType,
-      category: rawCat ? rawCat.trim() : guessCategory(rawDesc),
+      category: rawCat ? rawCat.trim() : guessCategory(cleanedDesc),
       isDuplicate: false
     })
   }
