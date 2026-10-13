@@ -94,21 +94,23 @@ export function NewsHistoryModal({
             {unreadCount > 0 && (
               <button
                 type="button"
-                className="btn btn-secondary btn-sm"
+                className="btn btn-secondary btn-sm btn-mark-all-history"
                 onClick={onMarkAllAsRead}
                 title="Marcar todas as novidades como lidas"
               >
                 <CheckCheck size={15} />
-                <span>Marcar todas como lidas ({unreadCount})</span>
+                <span className="btn-text-full">Marcar todas como lidas ({unreadCount})</span>
+                <span className="btn-text-short">Lidas ({unreadCount})</span>
               </button>
             )}
             <button
               type="button"
-              className="btn-icon-close"
+              className="icon-btn modal-close-btn btn-icon-close"
               onClick={onClose}
               aria-label="Fechar histórico de atualizações"
+              title="Fechar"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
         </header>
