@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useMemo } from 'react'
 import {
   Bell,
+  Calendar,
   Check,
   CheckCheck,
   ChevronRight,
@@ -9,7 +10,7 @@ import {
   Tag,
   X
 } from 'lucide-react'
-import { getCategoryMeta } from '../utils/updatesService'
+import { getCategoryMeta, groupUpdatesByDate } from '../utils/updatesService'
 
 export function NewsPopup({
   isOpen,
@@ -23,17 +24,15 @@ export function NewsPopup({
   if (!isOpen) return null
 
   const safeUpdates = Array.isArray(updates) ? updates : []
-  // Exibe as 4 novidades mais recentes no painel rápido
-  const recentUpdates = safeUpdates.slice(0, 4)
+  // Agrupa as novidades mais recentes cronologicamente por dia
+  const groupedUpdates = useMemo(() => {
+    return groupUpdatesByDate(safeUpdates.slice(0, 10))
+  }, [safeUpdates])
 
-  const formatDate = (isoString) => {
+  const formatTime = (isoString) => {
     try {
       const date = new Date(isoString)
-      return new Intl.DateTimeFormat('pt-BR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      }).format(date)
+      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     } catch {
       return ''
     }
@@ -91,63 +90,79 @@ export function NewsPopup({
           </div>
         </header>
 
-        {/* Lista de Atualizações Recentes */}
+        {/* Lista de Atualizações Recentes Agrupadas por Dia */}
         <div className="news-popup-body">
-          {recentUpdates.length === 0 ? (
+          {groupedUpdates.length === 0 ? (
             <div className="news-empty-state">
               <Bell size={32} className="text-muted" />
               <p>Nenhuma novidade recente publicada no momento.</p>
             </div>
           ) : (
-            recentUpdates.map((item) => {
-              const meta = getCategoryMeta(item.category)
-              return (
-                <article
-                  key={item.id}
-                  className={`news-item-card ${item.isRead ? 'read' : 'unread'}`}
-                >
-                  <div className="news-item-meta">
-                    <span
-                      className="category-pill"
-                      style={{ color: meta.color, backgroundColor: meta.bg }}
-                    >
-                      {meta.label}
+            <div className="news-groups-container">
+              {groupedUpdates.map((group) => (
+                <section key={group.date} className="news-day-group">
+                  <div className="news-day-header">
+                    <Calendar size={13} className="news-day-icon" />
+                    <span>{group.label}</span>
+                    <span className="news-day-badge">
+                      {group.items.length} {group.items.length === 1 ? 'novidade' : 'novidades'}
                     </span>
-                    {item.version && (
-                      <span className="version-pill">v{item.version}</span>
-                    )}
-                    <span className="news-item-date">
-                      <Clock size={12} />
-                      {formatDate(item.published_at)}
-                    </span>
-                    {!item.isRead && (
-                      <span className="unread-dot-badge" title="Novidade não lida" />
-                    )}
                   </div>
 
-                  <h4 className="news-item-title">{item.title}</h4>
-                  <p className="news-item-desc">{item.description}</p>
+                  <div className="news-day-items">
+                    {group.items.map((item) => {
+                      const meta = getCategoryMeta(item.category)
+                      return (
+                        <article
+                          key={item.id}
+                          className={`news-item-card ${item.isRead ? 'read' : 'unread'}`}
+                        >
+                          <div className="news-item-meta">
+                            <span
+                              className="category-pill"
+                              style={{ color: meta.color, backgroundColor: meta.bg }}
+                            >
+                              {meta.label}
+                            </span>
+                            {item.version && (
+                              <span className="version-pill">v{item.version}</span>
+                            )}
+                            <span className="news-item-date">
+                              <Clock size={12} />
+                              {formatTime(item.published_at)}
+                            </span>
+                            {!item.isRead && (
+                              <span className="unread-dot-badge" title="Novidade não lida" />
+                            )}
+                          </div>
 
-                  <div className="news-item-actions">
-                    {!item.isRead ? (
-                      <button
-                        type="button"
-                        className="btn-mark-read-item"
-                        onClick={() => onMarkAsRead(item.id)}
-                      >
-                        <Check size={13} />
-                        <span>Marcar como lida</span>
-                      </button>
-                    ) : (
-                      <span className="read-status-label">
-                        <CheckCheck size={12} />
-                        Lida
-                      </span>
-                    )}
+                          <h4 className="news-item-title">{item.title}</h4>
+                          <p className="news-item-desc">{item.description}</p>
+
+                          <div className="news-item-actions">
+                            {!item.isRead ? (
+                              <button
+                                type="button"
+                                className="btn-mark-read-item"
+                                onClick={() => onMarkAsRead(item.id)}
+                              >
+                                <Check size={13} />
+                                <span>Marcar como lida</span>
+                              </button>
+                            ) : (
+                              <span className="read-status-label">
+                                <CheckCheck size={12} />
+                                Lida
+                              </span>
+                            )}
+                          </div>
+                        </article>
+                      )
+                    })}
                   </div>
-                </article>
-              )
-            })
+                </section>
+              ))}
+            </div>
           )}
         </div>
 

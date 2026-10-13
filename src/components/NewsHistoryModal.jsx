@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import {
   Bell,
+  Calendar,
   Check,
   CheckCheck,
   Clock,
@@ -10,7 +11,7 @@ import {
   Tag,
   X
 } from 'lucide-react'
-import { getCategoryMeta } from '../utils/updatesService'
+import { getCategoryMeta, groupUpdatesByDate } from '../utils/updatesService'
 
 export function NewsHistoryModal({
   isOpen,
@@ -50,16 +51,17 @@ export function NewsHistoryModal({
     })
   }, [safeUpdates, selectedCategory, searchQuery])
 
+  // Agrupa as novidades filtradas por dia cronológico
+  const groupedUpdates = useMemo(() => {
+    return groupUpdatesByDate(filteredUpdates)
+  }, [filteredUpdates])
+
   if (!isOpen) return null
 
-  const formatDate = (isoString) => {
+  const formatTime = (isoString) => {
     try {
       const date = new Date(isoString)
-      return new Intl.DateTimeFormat('pt-BR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      }).format(date)
+      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     } catch {
       return ''
     }
@@ -168,56 +170,72 @@ export function NewsHistoryModal({
               )}
             </div>
           ) : (
-            <div className="timeline-cards-list">
-              {filteredUpdates.map((item) => {
-                const meta = getCategoryMeta(item.category)
-                return (
-                  <article
-                    key={item.id}
-                    className={`timeline-news-card ${item.isRead ? 'read' : 'unread'}`}
-                  >
-                    <div className="card-top-row">
-                      <div className="badges-group">
-                        <span
-                          className="category-badge"
-                          style={{ color: meta.color, backgroundColor: meta.bg }}
-                        >
-                          {meta.label}
-                        </span>
-                        {item.version && (
-                          <span className="version-tag">v{item.version}</span>
-                        )}
-                        <span className="date-tag">
-                          <Clock size={13} />
-                          {formatDate(item.published_at)}
-                        </span>
-                      </div>
-
-                      <div className="card-actions">
-                        {!item.isRead ? (
-                          <button
-                            type="button"
-                            className="btn-mark-single-read"
-                            onClick={() => onMarkAsRead(item.id)}
-                            title="Marcar esta novidade como lida"
-                          >
-                            <Check size={14} />
-                            <span>Marcar como lida</span>
-                          </button>
-                        ) : (
-                          <span className="status-read-badge">
-                            <CheckCheck size={13} />
-                            Lida
-                          </span>
-                        )}
-                      </div>
+            <div className="timeline-groups-container">
+              {groupedUpdates.map((group) => (
+                <section key={group.date} className="timeline-day-group">
+                  <div className="timeline-day-header">
+                    <div className="timeline-day-title-wrap">
+                      <Calendar size={14} className="timeline-day-icon" />
+                      <span className="timeline-day-title">{group.label}</span>
                     </div>
+                    <span className="timeline-day-badge">
+                      {group.items.length} {group.items.length === 1 ? 'novidade' : 'novidades'}
+                    </span>
+                  </div>
 
-                    <h3 className="timeline-card-title">{item.title}</h3>
-                    <p className="timeline-card-desc">{item.description}</p>
-                  </article>
-                )
-              })}
+                  <div className="timeline-cards-list">
+                    {group.items.map((item) => {
+                      const meta = getCategoryMeta(item.category)
+                      return (
+                        <article
+                          key={item.id}
+                          className={`timeline-news-card ${item.isRead ? 'read' : 'unread'}`}
+                        >
+                          <div className="card-top-row">
+                            <div className="badges-group">
+                              <span
+                                className="category-badge"
+                                style={{ color: meta.color, backgroundColor: meta.bg }}
+                              >
+                                {meta.label}
+                              </span>
+                              {item.version && (
+                                <span className="version-tag">v{item.version}</span>
+                              )}
+                              <span className="date-tag">
+                                <Clock size={13} />
+                                {formatTime(item.published_at)}
+                              </span>
+                            </div>
+
+                            <div className="card-actions">
+                              {!item.isRead ? (
+                                <button
+                                  type="button"
+                                  className="btn-mark-single-read"
+                                  onClick={() => onMarkAsRead(item.id)}
+                                  title="Marcar esta novidade como lida"
+                                >
+                                  <Check size={14} />
+                                  <span>Marcar como lida</span>
+                                </button>
+                              ) : (
+                                <span className="status-read-badge">
+                                  <CheckCheck size={13} />
+                                  Lida
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <h3 className="timeline-card-title">{item.title}</h3>
+                          <p className="timeline-card-desc">{item.description}</p>
+                        </article>
+                      )
+                    })}
+                  </div>
+                </section>
+              ))}
             </div>
           )}
         </div>

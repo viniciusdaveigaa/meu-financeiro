@@ -132,6 +132,9 @@ function MainDashboard({ session, onSignOut }) {
     if (!session?.user?.id) return
     await recordUserConsent(session.user.id)
     setConsentRequired(false)
+    setTimeout(() => {
+      loadNews()
+    }, 400)
   }
 
   // Sincronização de preferências de tema do usuário entre dispositivos
@@ -148,6 +151,19 @@ function MainDashboard({ session, onSignOut }) {
       const res = await fetchAppUpdates(session.user.id)
       setAppUpdates(res.updates)
       setUnreadNewsCount(res.unreadCount)
+
+      // Abertura automática quando houver novidades não lidas ainda não apresentadas nesta versão
+      if (res.unreadCount > 0 && res.updates.length > 0 && !consentRequired) {
+        const latestUpdate = res.updates[0]
+        const lastPromptedKey = `sc_news_last_prompted_${session.user.id}`
+        const lastPromptedId = localStorage.getItem(lastPromptedKey)
+        if (lastPromptedId !== latestUpdate.id) {
+          localStorage.setItem(lastPromptedKey, latestUpdate.id)
+          setTimeout(() => {
+            setNewsPopupOpen(true)
+          }, 850)
+        }
+      }
     } catch (err) {
       console.error('Erro ao carregar novidades:', err)
     }
@@ -161,7 +177,7 @@ function MainDashboard({ session, onSignOut }) {
     return () => {
       window.removeEventListener('news-updated', onNewsChanged)
     }
-  }, [session?.user?.id])
+  }, [session?.user?.id, consentRequired])
 
   const handleMarkUpdateAsRead = async (updateId) => {
     if (!session?.user?.id) return

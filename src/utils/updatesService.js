@@ -5,6 +5,42 @@ const STORAGE_READS_PREFIX = 'sc_read_updates'
 // Registros reais e fidedignos das atualizações efetivamente implementadas no sistema
 export const INITIAL_UPDATES_SEED = [
   {
+    id: 'seed-upd-csv-nubank',
+    title: 'Importação Aprimorada do Nubank e Extratos Pix',
+    description: 'Sanitização inteligente de lançamentos Pix no extrato CSV do Nubank, remoção de poluição de agência e conta nas descrições, categorização automática inteligente (Assinaturas, Transporte, Alimentação) e ampliação de limite de caracteres para garantir importação perfeita.',
+    category: 'fix',
+    version: '2.2.0',
+    published_at: '2026-10-13T19:30:00Z',
+    is_published: true
+  },
+  {
+    id: 'seed-upd-planning-order',
+    title: 'Reorganização da Seção de Planejamento',
+    description: 'A aba Planejamento foi reestruturada para priorizar suas contas: a navegação agora inicia por Contas e Recorrências, seguida de Caixinhas de Reserva, Categorias e Orçamentos Mensais, com abertura padrão imediata.',
+    category: 'improvement',
+    version: '2.2.0',
+    published_at: '2026-10-13T19:00:00Z',
+    is_published: true
+  },
+  {
+    id: 'seed-upd-bank-logos-hd',
+    title: 'Logos Bancárias com Alta Nitidez e Ampliação Visual',
+    description: 'Eliminação completa de margens vazias nos arquivos vetoriais e ampliação da área útil dos badges das instituições financeiras (Nubank, Mercado Pago, Itaú, Bradesco, Santander, Banco do Brasil, C6 Bank e outros) no extrato e formulários.',
+    category: 'improvement',
+    version: '2.2.0',
+    published_at: '2026-10-13T18:30:00Z',
+    is_published: true
+  },
+  {
+    id: 'seed-upd-news-grouped',
+    title: 'Novidades Agrupadas por Dia com Notificação Automática',
+    description: 'A Central de Novidades agora organiza todas as atualizações agrupadas cronologicamente por dia (Hoje, Ontem e datas anteriores) e exibe o painel de novidades automaticamente toda vez que houver uma nova funcionalidade ou melhoria disponível.',
+    category: 'feature',
+    version: '2.2.0',
+    published_at: '2026-10-13T18:00:00Z',
+    is_published: true
+  },
+  {
     id: 'seed-upd-1',
     title: 'Personalização de Cores do Aplicativo',
     description: 'Agora você pode escolher as cores da interface por meio de um seletor visual nativo (color picker) ou informar diretamente o código HEX (ex: #2563EB). Inclui paletas pré-configuradas, prévia em tempo real, restauração das cores padrão e cálculo automático de contraste WCAG AA tanto no modo claro quanto no modo escuro.',
@@ -94,6 +130,65 @@ export function getCategoryMeta(category = 'feature') {
 }
 
 /**
+ * Formata um rótulo amigável para o cabeçalho do grupo de novidades.
+ */
+export function formatNewsGroupDate(isoDate) {
+  if (!isoDate) return 'Recentes'
+  const today = new Date().toISOString().slice(0, 10)
+  const y = new Date()
+  y.setDate(y.getDate() - 1)
+  const yesterday = y.toISOString().slice(0, 10)
+
+  try {
+    const [year, month, day] = isoDate.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
+    const weekday = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(date)
+    const formattedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1)
+    const dayMonth = new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    }).format(date)
+
+    if (isoDate === today) {
+      return `Hoje • ${dayMonth}`
+    }
+    if (isoDate === yesterday) {
+      return `Ontem • ${dayMonth}`
+    }
+
+    return `${formattedWeekday}, ${dayMonth}`
+  } catch {
+    return isoDate
+  }
+}
+
+/**
+ * Agrupa uma lista de atualizações por dia (YYYY-MM-DD), ordenando os grupos do mais recente ao mais antigo.
+ */
+export function groupUpdatesByDate(updates = []) {
+  if (!Array.isArray(updates) || updates.length === 0) return []
+
+  const groupsMap = new Map()
+
+  updates.forEach((item) => {
+    const isoDate = item.published_at ? item.published_at.slice(0, 10) : '2026-10-13'
+    if (!groupsMap.has(isoDate)) {
+      groupsMap.set(isoDate, [])
+    }
+    groupsMap.get(isoDate).push(item)
+  })
+
+  return Array.from(groupsMap.entries())
+    .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
+    .map(([isoDate, items]) => ({
+      date: isoDate,
+      label: formatNewsGroupDate(isoDate),
+      items
+    }))
+}
+
+/**
  * Carrega a lista de novidades e o status de leitura sincronizado por usuário.
  */
 export async function fetchAppUpdates(userId = '') {
@@ -110,7 +205,7 @@ export async function fetchAppUpdates(userId = '') {
     } catch {}
   }
 
-  // 2. Busca as novidades no Supabase
+  // 2. Busca as novidades no Supabase e mescla com as sementes do sistema
   try {
     const { data, error } = await supabase
       .from('app_updates')
@@ -119,7 +214,14 @@ export async function fetchAppUpdates(userId = '') {
       .order('published_at', { ascending: false })
 
     if (!error && data && data.length > 0) {
-      updates = data
+      // Garante que novidades recentes registradas no código apareçam mesmo com dados existentes no banco
+      const dbTitles = new Set(data.map((d) => (d.title || '').trim().toLowerCase()))
+      const missingSeeds = INITIAL_UPDATES_SEED.filter(
+        (s) => !dbTitles.has((s.title || '').trim().toLowerCase())
+      )
+      updates = [...data, ...missingSeeds].sort(
+        (a, b) => new Date(b.published_at) - new Date(a.published_at)
+      )
     } else {
       updates = INITIAL_UPDATES_SEED
     }

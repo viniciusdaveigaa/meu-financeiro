@@ -8347,6 +8347,58 @@ button.withdraw-link:hover {
   gap: 10px;
 }
 
+.news-groups-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.news-day-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.news-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted, #475569);
+  padding: 5px 8px;
+  background: var(--bg-hover, #f1f5f9);
+  border-radius: 8px;
+  border: 1px solid var(--border-light, #e2e8f0);
+}
+
+.news-day-header span:first-of-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.news-day-icon {
+  color: var(--brand-accent, #10b981);
+  flex-shrink: 0;
+}
+
+.news-day-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--bg-card, #ffffff);
+  color: var(--text-muted, #64748b);
+  border: 1px solid var(--border-light, #e2e8f0);
+}
+
+.news-day-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .news-item-card {
   padding: 12px;
   border-radius: 12px;
@@ -8619,6 +8671,56 @@ button.withdraw-link:hover {
   padding: 20px 24px;
   overflow-y: auto;
   flex: 1;
+}
+
+.timeline-groups-container {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.timeline-day-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.timeline-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--bg-hover, #f8fafc);
+  border: 1px solid var(--border-light, #e2e8f0);
+}
+
+.timeline-day-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--emerald-950, #1e293b);
+}
+
+.timeline-day-icon {
+  color: var(--brand-accent, #059669);
+  flex-shrink: 0;
+}
+
+.timeline-day-title {
+  letter-spacing: -0.01em;
+}
+
+.timeline-day-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--bg-card, #ffffff);
+  color: var(--text-muted, #64748b);
+  border: 1px solid var(--border-light, #cbd5e1);
 }
 
 .timeline-cards-list {
