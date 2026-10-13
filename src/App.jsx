@@ -34,6 +34,7 @@ import {
   markUpdateAsRead,
   markAllUpdatesAsRead
 } from './utils/updatesService'
+import { syncUserTheme } from './utils/theme'
 
 import {
   getMonthKey,
@@ -132,6 +133,13 @@ function MainDashboard({ session, onSignOut }) {
     await recordUserConsent(session.user.id)
     setConsentRequired(false)
   }
+
+  // Sincronização de preferências de tema do usuário entre dispositivos
+  useEffect(() => {
+    if (session?.user?.id) {
+      syncUserTheme(session.user.id)
+    }
+  }, [session?.user?.id])
 
   // Sincronização de Novidades
   const loadNews = async () => {

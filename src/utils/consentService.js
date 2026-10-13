@@ -118,3 +118,4 @@ export async function recordUserConsent(userId) {
   window.dispatchEvent(new Event('consent-updated'))
   return { success: true, dbSuccess, consentRecord }
 }
+

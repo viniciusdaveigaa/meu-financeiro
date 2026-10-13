@@ -213,3 +213,4 @@ export async function markAllUpdatesAsRead(userId, updateIds = []) {
 
   window.dispatchEvent(new Event('news-updated'))
 }
+

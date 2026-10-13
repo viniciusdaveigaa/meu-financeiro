@@ -7,12 +7,14 @@ import {
   RefreshCw,
   RotateCcw,
   Sparkles,
+  Sliders,
   X
 } from 'lucide-react'
 import {
   DEFAULT_THEME,
   PRESET_THEMES,
   applyTheme,
+  detectActivePreset,
   getContrastColor,
   getSavedTheme,
   isValidHex,
@@ -59,28 +61,36 @@ export function ThemeCustomizationModal({ onClose, userId }) {
 
   const handleSelectPreset = (preset) => {
     setCurrentTheme({ ...preset })
+    applyTheme(preset)
   }
 
   const handleResetDefaults = () => {
     setCurrentTheme({ ...DEFAULT_THEME })
-    resetToDefaultTheme()
+    applyTheme(DEFAULT_THEME)
   }
 
   const handleSave = async () => {
     // Valida todos os campos HEX
-    const keys = ['primaryColor', 'accentColor', 'darkElementsColor', 'selectedBgColor', 'interactiveColor']
+    const keys = [
+      'primaryColor',
+      'accentColor',
+      'darkElementsColor',
+      'selectedBgColor',
+      'interactiveColor'
+    ]
     for (const key of keys) {
       if (!isValidHex(currentTheme[key])) {
-        return dialog.alert(`O código informado para "${key}" não é um HEX válido (ex: #2563EB).`, {
-          title: 'Código de cor inválido'
-        })
+        return dialog.alert(
+          `O código informado para "${key}" não é um HEX válido (ex: #2563EB).`,
+          { title: 'Código de cor inválido' }
+        )
       }
     }
 
     saveTheme(currentTheme)
     setSavedSuccess(true)
 
-    // Se estiver logado, salva também no perfil do Supabase
+    // Se estiver logado, salva também no perfil do Supabase para persistir entre dispositivos
     if (userId) {
       try {
         await supabase
@@ -94,8 +104,11 @@ export function ThemeCustomizationModal({ onClose, userId }) {
 
     setTimeout(() => {
       onClose()
-    }, 700)
+    }, 600)
   }
+
+  const activePresetId = detectActivePreset(currentTheme)
+  const activePresetObj = PRESET_THEMES.find((p) => p.id === activePresetId)
 
   return (
     <div
@@ -120,7 +133,7 @@ export function ThemeCustomizationModal({ onClose, userId }) {
             </span>
             <div className="theme-head-text">
               <h3 id="theme-modal-title">Personalização de Cores</h3>
-              <p>Personalize as cores da interface e veja o resultado imediatamente.</p>
+              <p>Escolha um tema da nossa galeria ou personalize qualquer cor manualmente.</p>
             </div>
           </div>
           <button
@@ -135,18 +148,29 @@ export function ThemeCustomizationModal({ onClose, userId }) {
         </header>
 
         <div className="theme-modal-body">
-          {/* Preset Palettes */}
+          {/* Preset Palettes Gallery */}
           <section className="theme-section">
-            <div className="theme-section-title">
-              <Sparkles size={16} />
-              <span>Temas Pré-definidos</span>
+            <div className="theme-section-header">
+              <div className="theme-section-title">
+                <Sparkles size={16} />
+                <span>Galeria de Temas Prontos ({PRESET_THEMES.length} opções)</span>
+              </div>
+              <div className="active-theme-indicator">
+                {activePresetId !== 'custom' ? (
+                  <span className="badge-theme-preset">
+                    <Check size={12} /> {activePresetObj?.name}
+                  </span>
+                ) : (
+                  <span className="badge-theme-custom">
+                    Personalizado (Ajuste manual)
+                  </span>
+                )}
+              </div>
             </div>
+
             <div className="preset-themes-grid">
               {PRESET_THEMES.map((preset) => {
-                const isSelected =
-                  currentTheme.primaryColor === preset.primaryColor &&
-                  currentTheme.accentColor === preset.accentColor &&
-                  currentTheme.darkElementsColor === preset.darkElementsColor
+                const isSelected = activePresetId === preset.id
 
                 return (
                   <button
@@ -154,14 +178,37 @@ export function ThemeCustomizationModal({ onClose, userId }) {
                     type="button"
                     className={`preset-theme-card ${isSelected ? 'active' : ''}`}
                     onClick={() => handleSelectPreset(preset)}
+                    title={`Aplicar tema ${preset.name} - ${preset.description}`}
                   >
-                    <div className="preset-color-circles">
-                      <span style={{ background: preset.darkElementsColor }} />
-                      <span style={{ background: preset.primaryColor }} />
-                      <span style={{ background: preset.accentColor }} />
+                    <div className="preset-card-top">
+                      <div className="preset-color-circles">
+                        <span
+                          style={{ background: preset.darkElementsColor }}
+                          title="Fundo escuro / Topo"
+                        />
+                        <span
+                          style={{ background: preset.primaryColor }}
+                          title="Cor principal"
+                        />
+                        <span
+                          style={{ background: preset.accentColor }}
+                          title="Destaque"
+                        />
+                        <span
+                          style={{ background: preset.selectedBgColor }}
+                          title="Fundo suave"
+                        />
+                      </div>
+                      {isSelected && (
+                        <span className="preset-check-badge">
+                          <Check size={12} />
+                        </span>
+                      )}
                     </div>
-                    <span className="preset-name">{preset.name}</span>
-                    {isSelected && <Check size={14} className="preset-check" />}
+                    <div className="preset-card-info">
+                      <strong className="preset-name">{preset.name}</strong>
+                      <small className="preset-desc">{preset.description}</small>
+                    </div>
                   </button>
                 )
               })}
@@ -172,7 +219,7 @@ export function ThemeCustomizationModal({ onClose, userId }) {
           <section className="theme-section">
             <div className="theme-section-title">
               <Eye size={16} />
-              <span>Prévia dos Elementos</span>
+              <span>Prévia dos Elementos em Tempo Real</span>
             </div>
             <div className="theme-preview-box">
               {/* Top Simulated App Bar */}
@@ -188,14 +235,14 @@ export function ThemeCustomizationModal({ onClose, userId }) {
                     color: currentTheme.interactiveColor
                   }}
                 >
-                  Ativo
+                  {activePresetId !== 'custom' ? activePresetObj?.name : 'Personalizado'}
                 </span>
               </div>
 
               {/* Sample Card with Values and Buttons */}
               <div className="preview-card-body">
                 <div className="preview-meta">
-                  <span className="preview-label">Saldo em tempo real</span>
+                  <span className="preview-label">Saldo disponível</span>
                   <strong className="preview-val" style={{ color: currentTheme.primaryColor }}>
                     R$ 8.450,00
                   </strong>
@@ -239,18 +286,21 @@ export function ThemeCustomizationModal({ onClose, userId }) {
           {/* Detailed Color Pickers */}
           <section className="theme-section">
             <div className="theme-section-title">
-              <Palette size={16} />
-              <span>Ajuste Individual de Cores</span>
+              <Sliders size={16} />
+              <span>Ajuste Manual e Códigos HEX</span>
             </div>
+            <p className="theme-section-hint">
+              Altere qualquer cor manualmente com o seletor visual ou informe o código HEX (ex: #2563EB).
+            </p>
 
             <div className="color-fields-grid">
               {/* 1. Elementos em Verde Escuro / Fundo Profundo */}
               <div className="color-field-card">
                 <div className="color-field-info">
                   <label htmlFor="color-dark-elements">
-                    <strong>Elementos Escuros Principais</strong>
+                    <strong>Elementos Escuros e Topo</strong>
                   </label>
-                  <span>Substitui os fundos e cabeçalhos em verde escuro</span>
+                  <span>Substitui a topbar e fundos de contraste profundo</span>
                 </div>
                 <div className="color-field-inputs">
                   <input
@@ -388,10 +438,10 @@ export function ThemeCustomizationModal({ onClose, userId }) {
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={handleResetDefaults}
-            title="Voltar às cores originais do aplicativo"
+            title="Voltar ao tema Verde original do aplicativo"
           >
             <RotateCcw size={15} />
-            Restaurar padrão
+            <span>Restaurar tema padrão</span>
           </button>
 
           <div className="modal-foot-right">
@@ -421,4 +471,3 @@ export function ThemeCustomizationModal({ onClose, userId }) {
     </div>
   )
 }
-

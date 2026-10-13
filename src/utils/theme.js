@@ -1,11 +1,13 @@
 /**
  * Utilitário de Temas e Personalização de Cores do Saldo Claro
- * Aplica variáveis CSS dinamicamente com cálculo de tons e contraste.
+ * Suporta galeria com 12 temas predefinidos, customização manual HEX e sincronização.
  */
+import { supabase } from '../supabase'
 
 export const DEFAULT_THEME = {
   id: 'emerald',
-  name: 'Esmeralda (Padrão)',
+  name: 'Verde original',
+  description: 'Identidade clássica do Saldo Claro',
   primaryColor: '#10382f',       // Cor dos elementos principais em verde escuro
   accentColor: '#1f9d6b',        // Destaque dos botões e links
   darkElementsColor: '#0a251f',  // Topbar, cabeçalhos escuros e fundos profundos
@@ -16,17 +18,29 @@ export const DEFAULT_THEME = {
 export const PRESET_THEMES = [
   DEFAULT_THEME,
   {
-    id: 'blue',
-    name: 'Azul Safira',
-    primaryColor: '#1e3a8a',
-    accentColor: '#2563eb',
-    darkElementsColor: '#0c1f38',
-    selectedBgColor: '#dbeafe',
-    interactiveColor: '#1d4ed8'
+    id: 'pink-light',
+    name: 'Rosa claro',
+    description: 'Rosa delicado, suave e moderno em tons pastel',
+    primaryColor: '#e879b9',
+    accentColor: '#f4a6cf',
+    darkElementsColor: '#3d0a25',
+    selectedBgColor: '#fce7f3',
+    interactiveColor: '#be185d'
+  },
+  {
+    id: 'pink-dark',
+    name: 'Rosa escuro',
+    description: 'Rosa intenso, sofisticado e marcante',
+    primaryColor: '#be185d',
+    accentColor: '#db2777',
+    darkElementsColor: '#2b0416',
+    selectedBgColor: '#fce7f3',
+    interactiveColor: '#9d174d'
   },
   {
     id: 'purple',
-    name: 'Roxo Elétrico',
+    name: 'Roxo',
+    description: 'Tons de violeta e ametista',
     primaryColor: '#581c87',
     accentColor: '#8b5cf6',
     darkElementsColor: '#1e0c38',
@@ -34,37 +48,90 @@ export const PRESET_THEMES = [
     interactiveColor: '#6d28d9'
   },
   {
-    id: 'wine',
-    name: 'Vinho Elegante',
-    primaryColor: '#881337',
-    accentColor: '#e11d48',
-    darkElementsColor: '#2d0a14',
-    selectedBgColor: '#ffe4e6',
-    interactiveColor: '#9f1239'
+    id: 'ocean-blue',
+    name: 'Azul oceano',
+    description: 'Azul moderno, dinâmico e profissional',
+    primaryColor: '#0369a1',
+    accentColor: '#0ea5e9',
+    darkElementsColor: '#082f49',
+    selectedBgColor: '#e0f2fe',
+    interactiveColor: '#0284c7'
   },
   {
-    id: 'graphite',
-    name: 'Grafite Minimalista',
+    id: 'navy-blue',
+    name: 'Azul escuro',
+    description: 'Azul-marinho elegante e corporativo',
+    primaryColor: '#1e3a8a',
+    accentColor: '#2563eb',
+    darkElementsColor: '#0f172a',
+    selectedBgColor: '#dbeafe',
+    interactiveColor: '#1d4ed8'
+  },
+  {
+    id: 'crimson-red',
+    name: 'Vermelho',
+    description: 'Vermelho contemporâneo e vibrante',
+    primaryColor: '#991b1b',
+    accentColor: '#dc2626',
+    darkElementsColor: '#280606',
+    selectedBgColor: '#fee2e2',
+    interactiveColor: '#b91c1c'
+  },
+  {
+    id: 'sunset-orange',
+    name: 'Laranja',
+    description: 'Tons quentes e vibrantes de pôr do sol',
+    primaryColor: '#c2410c',
+    accentColor: '#ea580c',
+    darkElementsColor: '#331206',
+    selectedBgColor: '#ffedd5',
+    interactiveColor: '#9a3412'
+  },
+  {
+    id: 'golden-amber',
+    name: 'Amarelo dourado',
+    description: 'Tons dourados, equilibrados e nobres',
+    primaryColor: '#854d0e',
+    accentColor: '#d97706',
+    darkElementsColor: '#2e1c05',
+    selectedBgColor: '#fef3c7',
+    interactiveColor: '#a16207'
+  },
+  {
+    id: 'cyan-turquoise',
+    name: 'Ciano',
+    description: 'Tons de azul-claro e turquesa refrescante',
+    primaryColor: '#0e7490',
+    accentColor: '#06b6d4',
+    darkElementsColor: '#082f3a',
+    selectedBgColor: '#cffafe',
+    interactiveColor: '#0891b2'
+  },
+  {
+    id: 'graphite-black',
+    name: 'Preto e grafite',
+    description: 'Visual escuro, minimalista e sofisticado',
     primaryColor: '#27272a',
     accentColor: '#52525b',
-    darkElementsColor: '#18181b',
+    darkElementsColor: '#09090b',
     selectedBgColor: '#e4e4e7',
     interactiveColor: '#3f3f46'
   },
   {
-    id: 'amber',
-    name: 'Âmbar Solar',
-    primaryColor: '#78350f',
-    accentColor: '#d97706',
-    darkElementsColor: '#261605',
-    selectedBgColor: '#fef3c7',
-    interactiveColor: '#92400e'
+    id: 'lavender',
+    name: 'Lavanda',
+    description: 'Tons suaves de lilás e roxo-claro relaxante',
+    primaryColor: '#6b21a8',
+    accentColor: '#a855f7',
+    darkElementsColor: '#240b3b',
+    selectedBgColor: '#f3e8ff',
+    interactiveColor: '#7e22ce'
   }
 ]
 
 export const STORAGE_KEY_THEME = 'sc_theme_preferences'
 
-/** Valida código HEX de 6 caracteres (#RRGGBB) */
+/** Valida código HEX (#RGB ou #RRGGBB) */
 export function isValidHex(hex) {
   return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(hex)
 }
@@ -104,9 +171,22 @@ export function adjustBrightness(hex, percent) {
 /** Calcula cor de contraste ideal (preto ou branco) para um fundo */
 export function getContrastColor(hex) {
   const { r, g, b } = hexToRgb(hex)
-  // Fórmula de luminância relativa WCAG
   const yiq = (r * 299 + g * 587 + b * 114) / 1000
   return yiq >= 150 ? '#0a251f' : '#ffffff'
+}
+
+/** Identifica se o tema atual corresponde a um dos presets ou é personalizado */
+export function detectActivePreset(theme) {
+  if (!theme) return DEFAULT_THEME.id
+  const match = PRESET_THEMES.find(
+    (p) =>
+      p.primaryColor.toLowerCase() === theme.primaryColor?.toLowerCase() &&
+      p.accentColor.toLowerCase() === theme.accentColor?.toLowerCase() &&
+      p.darkElementsColor.toLowerCase() === theme.darkElementsColor?.toLowerCase() &&
+      p.selectedBgColor.toLowerCase() === theme.selectedBgColor?.toLowerCase() &&
+      p.interactiveColor.toLowerCase() === theme.interactiveColor?.toLowerCase()
+  )
+  return match ? match.id : 'custom'
 }
 
 /** Retorna o tema salvo no localStorage ou o padrão */
@@ -148,12 +228,14 @@ export function applyTheme(theme) {
   root.style.setProperty('--emerald-100', selected)
   root.style.setProperty('--emerald-50', lighterSelected)
 
-  // Variáveis semânticas dedicadas
+  // Variáveis semânticas dedicadas e contraste calculado
   root.style.setProperty('--brand-primary', primary)
   root.style.setProperty('--brand-dark', dark)
   root.style.setProperty('--brand-accent', accent)
   root.style.setProperty('--brand-selected-bg', selected)
   root.style.setProperty('--brand-interactive', interactive)
+  root.style.setProperty('--primary-contrast', getContrastColor(primary))
+  root.style.setProperty('--accent-contrast', getContrastColor(accent))
   root.style.setProperty('--brand-accent-contrast', getContrastColor(accent))
   root.style.setProperty('--brand-primary-contrast', getContrastColor(primary))
 }
@@ -165,6 +247,24 @@ export function saveTheme(theme) {
   } catch {}
   applyTheme(theme)
   window.dispatchEvent(new CustomEvent('app-theme-changed', { detail: theme }))
+}
+
+/** Sincroniza preferências do tema da conta do usuário no Supabase */
+export async function syncUserTheme(userId) {
+  if (!userId) return
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('theme_preferences')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (!error && data?.theme_preferences) {
+      saveTheme(data.theme_preferences)
+    }
+  } catch (err) {
+    console.warn('Erro ao sincronizar tema do Supabase:', err)
+  }
 }
 
 /** Restaura as cores originais padrão */
@@ -179,4 +279,3 @@ export function initTheme() {
   applyTheme(current)
   return current
 }
-

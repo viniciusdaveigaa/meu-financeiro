@@ -92,3 +92,4 @@ export const PRIVACY_POLICY_SECTIONS = [
     content: `Todo o tráfego de rede utiliza conexões criptografadas com protocolo HTTPS/TLS 1.3 de ponta a ponta. As credenciais de acesso são processadas por funções de dispersão criptográfica irreversível (hash) gerenciadas pelo Supabase Auth.`
   }
 ]
+
