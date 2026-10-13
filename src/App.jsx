@@ -57,8 +57,8 @@ function MainDashboard({ session, onSignOut }) {
 
   // App tabs: 'dashboard' | 'transactions' | 'planning' | 'guide'
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [planningSubTab, setPlanningSubTab] = useState('budgets') // 'budgets' | 'savings' | 'accounts' | 'categories'
-  const [visitedPlanningTabs, setVisitedPlanningTabs] = useState(() => new Set(['budgets']))
+  const [planningSubTab, setPlanningSubTab] = useState('accounts') // 'accounts' | 'savings' | 'categories' | 'budgets'
+  const [visitedPlanningTabs, setVisitedPlanningTabs] = useState(() => new Set(['accounts']))
   const [month, setMonth] = useState(getMonthKey(new Date()))
 
   useEffect(() => {
@@ -835,11 +835,11 @@ function MainDashboard({ session, onSignOut }) {
                 <div className="planning-subnav-bar">
                   <button
                     type="button"
-                    className={`planning-subnav-btn ${planningSubTab === 'budgets' ? 'active' : ''}`}
-                    onClick={() => setPlanningSubTab('budgets')}
+                    className={`planning-subnav-btn ${planningSubTab === 'accounts' ? 'active' : ''}`}
+                    onClick={() => setPlanningSubTab('accounts')}
                   >
-                    <Target size={16} />
-                    <span>Orçamentos ({budgets.length})</span>
+                    <CreditCard size={16} />
+                    <span>Contas e Recorrências</span>
                   </button>
                   <button
                     type="button"
@@ -851,41 +851,23 @@ function MainDashboard({ session, onSignOut }) {
                   </button>
                   <button
                     type="button"
-                    className={`planning-subnav-btn ${planningSubTab === 'accounts' ? 'active' : ''}`}
-                    onClick={() => setPlanningSubTab('accounts')}
-                  >
-                    <CreditCard size={16} />
-                    <span>Contas e Recorrências</span>
-                  </button>
-                  <button
-                    type="button"
                     className={`planning-subnav-btn ${planningSubTab === 'categories' ? 'active' : ''}`}
                     onClick={() => setPlanningSubTab('categories')}
                   >
                     <Bookmark size={16} />
                     <span>Categorias</span>
                   </button>
+                  <button
+                    type="button"
+                    className={`planning-subnav-btn ${planningSubTab === 'budgets' ? 'active' : ''}`}
+                    onClick={() => setPlanningSubTab('budgets')}
+                  >
+                    <Target size={16} />
+                    <span>Orçamentos ({budgets.length})</span>
+                  </button>
                 </div>
 
                 <div className="planning-subtab-content">
-                  {visitedPlanningTabs.has('budgets') && (
-                    <div style={{ display: planningSubTab === 'budgets' ? 'block' : 'none' }}>
-                      <BudgetPanel
-                        month={month}
-                        budgets={budgets}
-                        expensesByCategory={expensesByCategory}
-                        onSave={saveBudgets}
-                        ready={budgetReady}
-                      />
-                    </div>
-                  )}
-
-                  {visitedPlanningTabs.has('savings') && (
-                    <div style={{ display: planningSubTab === 'savings' ? 'block' : 'none' }}>
-                      <SavingsPanel userId={session?.user?.id} accounts={accounts} />
-                    </div>
-                  )}
-
                   {visitedPlanningTabs.has('accounts') && (
                     <div style={{ display: planningSubTab === 'accounts' ? 'block' : 'none' }}>
                       <AdvancedPanel
@@ -897,9 +879,27 @@ function MainDashboard({ session, onSignOut }) {
                     </div>
                   )}
 
+                  {visitedPlanningTabs.has('savings') && (
+                    <div style={{ display: planningSubTab === 'savings' ? 'block' : 'none' }}>
+                      <SavingsPanel userId={session?.user?.id} accounts={accounts} />
+                    </div>
+                  )}
+
                   {visitedPlanningTabs.has('categories') && (
                     <div style={{ display: planningSubTab === 'categories' ? 'block' : 'none' }}>
                       <CategoryManager />
+                    </div>
+                  )}
+
+                  {visitedPlanningTabs.has('budgets') && (
+                    <div style={{ display: planningSubTab === 'budgets' ? 'block' : 'none' }}>
+                      <BudgetPanel
+                        month={month}
+                        budgets={budgets}
+                        expensesByCategory={expensesByCategory}
+                        onSave={saveBudgets}
+                        ready={budgetReady}
+                      />
                     </div>
                   )}
                 </div>

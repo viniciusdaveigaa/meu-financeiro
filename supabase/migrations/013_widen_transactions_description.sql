@@ -8,3 +8,4 @@ alter table public.transactions
 alter table public.transactions 
   add constraint transactions_description_check 
   check (char_length(trim(description)) between 1 and 255);
+

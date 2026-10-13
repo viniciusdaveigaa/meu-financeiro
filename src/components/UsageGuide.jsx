@@ -160,12 +160,12 @@ export function UsageGuide({
       summary: 'Organize suas contas bancárias e cartões com limites, dia de fechamento e vencimento.',
       text: 'Gerencie todas as suas formas de pagamento em um local unificado. Você pode cadastrar contas correntes, carteiras em espécie e cartões de crédito ou débito, configurando o limite disponível e os dias exatos de fechamento e vencimento da fatura.',
       steps: [
-        'Acesse a aba "Avançado" e localize a seção "Gestão de Contas e Cartões".',
+        'Acesse a aba "Planejamento" > "Contas e Recorrências".',
         'Preencha o nome do cartão ou conta, o tipo (Conta, Cartão de Crédito ou Débito) e o limite.',
         'Para cartões de crédito, informe o dia de fechamento e o dia de vencimento da fatura.',
         'As contas ficam disponíveis instantaneamente nos formulários de transações e filtros do extrato.'
       ],
-      action: onNavigateTab ? { label: 'Gerenciar Contas e Cartões', onClick: () => onNavigateTab('advanced') } : null
+      action: onNavigateTab ? { label: 'Gerenciar Contas e Cartões', onClick: () => onNavigateTab('planning') } : null
     },
     {
       id: 'cards-invoices',
