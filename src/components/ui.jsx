@@ -85,6 +85,7 @@ export function Logo({ light = false }) {
 /** Logotipo / Ícone visual de banco ou cartão de crédito. */
 export function BankLogoBadge({ logoId, accountName = '', kind = 'account', size = 32, className = '' }) {
   const logo = resolveBankLogo(logoId, accountName, kind)
+  const SvgComp = logo.SvgComponent
   const Icon = logo.icon
 
   return (
@@ -93,13 +94,21 @@ export function BankLogoBadge({ logoId, accountName = '', kind = 'account', size
       style={{
         width: size,
         height: size,
-        background: logo.bg,
-        color: logo.color
+        background: SvgComp ? 'transparent' : logo.bg,
+        color: logo.color,
+        borderRadius: Math.round(size * 0.28),
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        flexShrink: 0
       }}
       title={logo.name}
       aria-label={logo.name}
     >
-      {Icon ? (
+      {SvgComp ? (
+        <SvgComp size={size} />
+      ) : Icon ? (
         <Icon size={Math.round(size * 0.52)} strokeWidth={2.2} />
       ) : (
         <span

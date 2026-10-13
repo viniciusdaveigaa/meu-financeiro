@@ -21,6 +21,7 @@ import { CategoryManager } from './components/CategoryManager'
 import { UsageGuide } from './components/UsageGuide'
 import { SettingsModal } from './components/SettingsModal'
 import { PrivacyTermsModal } from './components/PrivacyTermsModal'
+import { ThemeCustomizationModal } from './components/ThemeCustomizationModal'
 import { SignOutScreen } from './components/SignOutScreen'
 import { MobileNav } from './components/MobileNav'
 import { Logo } from './components/ui'
@@ -72,6 +73,7 @@ function MainDashboard({ session, onSignOut }) {
   const [modal, setModal] = useState(null)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false)
+  const [customizationModalOpen, setCustomizationModalOpen] = useState(false)
   const [userName, setUserName] = useState(() => session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || '')
 
   const loadConfig = async () => {
@@ -283,16 +285,44 @@ function MainDashboard({ session, onSignOut }) {
 
   // Save transaction handler
   const saveTransaction = async (draft) => {
+    const isCreditPurchase = draft.type === 'expense' && draft.payment_method === 'credit'
+    const affectsBalance = isCreditPurchase ? false : (draft.affects_balance !== false)
+
     const payload = {
       type: draft.type,
       description: draft.description,
       amount: draft.amount,
       category: draft.category,
-      date: draft.date
+      date: draft.date,
+      affects_balance: affectsBalance,
+      show_in_statement: draft.show_in_statement !== false,
+      payment_method: draft.payment_method || null,
+      invoice_month: isCreditPurchase ? (draft.invoice_month || draft.date.slice(0, 7)) : null
     }
 
     if (advancedReady) {
       payload.account_id = draft.account_id || null
+    }
+
+    // Fallback gracioso caso colunas novas ainda não tenham sido migradas no Supabase
+    const safeInsert = async (table, rows) => {
+      let res = await supabase.from(table).insert(rows)
+      if (res.error && (res.error.message?.includes('payment_method') || res.error.message?.includes('invoice_month') || res.error.message?.includes('show_in_statement'))) {
+        const cleanRows = Array.isArray(rows)
+          ? rows.map(({ payment_method, invoice_month, show_in_statement, ...rest }) => rest)
+          : (({ payment_method, invoice_month, show_in_statement, ...rest }) => rest)(rows)
+        res = await supabase.from(table).insert(cleanRows)
+      }
+      return res
+    }
+
+    const safeUpdate = async (table, data, matchCol, matchVal) => {
+      let res = await supabase.from(table).update(data).eq(matchCol, matchVal)
+      if (res.error && (res.error.message?.includes('payment_method') || res.error.message?.includes('invoice_month') || res.error.message?.includes('show_in_statement'))) {
+        const { payment_method, invoice_month, show_in_statement, ...rest } = data
+        res = await supabase.from(table).update(rest).eq(matchCol, matchVal)
+      }
+      return res
     }
 
     let result
@@ -311,13 +341,11 @@ function MainDashboard({ session, onSignOut }) {
         installment_group_id: groupId,
         installment_number: 1,
         installment_total: Number(draft.installments),
-        date: dateInMonth(startMonth, day)
+        date: dateInMonth(startMonth, day),
+        invoice_month: isCreditPurchase ? (draft.invoice_month || startMonth) : null
       }
 
-      result = await supabase
-        .from('transactions')
-        .update({ ...payload, ...installmentData })
-        .eq('id', draft.id)
+      result = await safeUpdate('transactions', { ...payload, ...installmentData }, 'id', draft.id)
 
       if (!result.error) {
         const futureRows = Array.from(
@@ -326,17 +354,18 @@ function MainDashboard({ session, onSignOut }) {
             ...payload,
             user_id: session.user.id,
             date: dateInMonth(changeMonth(startMonth, idx + 1), day),
+            invoice_month: isCreditPurchase ? changeMonth(draft.invoice_month || startMonth, idx + 1) : null,
             installment_group_id: groupId,
             installment_number: idx + 2,
             installment_total: Number(draft.installments)
           })
         )
-        result = await supabase.from('transactions').insert(futureRows)
+        result = await safeInsert('transactions', futureRows)
       }
     }
     // 2. Existing simple edit
     else if (draft.id) {
-      result = await supabase.from('transactions').update(payload).eq('id', draft.id)
+      result = await safeUpdate('transactions', payload, 'id', draft.id)
     }
     // 3. New transaction with installments
     else if (advancedReady && Number(draft.installments) > 1) {
@@ -347,20 +376,19 @@ function MainDashboard({ session, onSignOut }) {
         ...payload,
         user_id: session.user.id,
         date: dateInMonth(changeMonth(startMonth, idx), day),
+        invoice_month: isCreditPurchase ? changeMonth(draft.invoice_month || startMonth, idx) : null,
         installment_group_id: groupId,
         installment_number: idx + 1,
         installment_total: Number(draft.installments)
       }))
-      result = await supabase.from('transactions').insert(rows)
+      result = await safeInsert('transactions', rows)
     }
     // 4. Regular new transaction
     else {
       if (draft.start_month && draft.start_month !== draft.date?.slice(0, 7)) {
         payload.date = dateInMonth(draft.start_month, Number(draft.date.slice(-2)))
       }
-      result = await supabase
-        .from('transactions')
-        .insert({ ...payload, user_id: session.user.id })
+      result = await safeInsert('transactions', { ...payload, user_id: session.user.id })
     }
 
     // Handle recurring series if checked
@@ -546,6 +574,7 @@ function MainDashboard({ session, onSignOut }) {
         onNewTransaction={() => setModal({})}
         onOpenSettings={() => setSettingsModalOpen(true)}
         onOpenPrivacy={() => setPrivacyModalOpen(true)}
+        onOpenCustomization={() => setCustomizationModalOpen(true)}
         onSignOut={onSignOut}
       />
 
@@ -738,7 +767,7 @@ function MainDashboard({ session, onSignOut }) {
 
                   {visitedPlanningTabs.has('savings') && (
                     <div style={{ display: planningSubTab === 'savings' ? 'block' : 'none' }}>
-                      <SavingsPanel userId={session?.user?.id} />
+                      <SavingsPanel userId={session?.user?.id} accounts={accounts} />
                     </div>
                   )}
 
@@ -807,6 +836,14 @@ function MainDashboard({ session, onSignOut }) {
       {/* Privacy & Terms Modal */}
       {privacyModalOpen && (
         <PrivacyTermsModal onClose={() => setPrivacyModalOpen(false)} />
+      )}
+
+      {/* Theme Customization Modal */}
+      {customizationModalOpen && (
+        <ThemeCustomizationModal
+          userId={session?.user?.id}
+          onClose={() => setCustomizationModalOpen(false)}
+        />
       )}
     </div>
   )

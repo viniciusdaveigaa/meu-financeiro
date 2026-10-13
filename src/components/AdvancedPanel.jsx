@@ -49,6 +49,9 @@ export function AdvancedPanel({
   )
   const [name, setName] = useState('')
   const [kind, setKind] = useState('account')
+  const [cardType, setCardType] = useState('credit')
+  const [closingDay, setClosingDay] = useState('')
+  const [dueDay, setDueDay] = useState('')
   const [logo, setLogo] = useState('')
   const [ready, setReady] = useState(true)
   const [addingAccount, setAddingAccount] = useState(false)
@@ -208,6 +211,9 @@ export function AdvancedPanel({
     const payload = {
       name: cleanName,
       kind,
+      card_type: kind === 'card' ? (cardType || 'credit') : null,
+      closing_day: kind === 'card' && cardType !== 'debit' && closingDay ? Math.min(31, Math.max(1, parseInt(closingDay, 10))) : null,
+      due_day: kind === 'card' && cardType !== 'debit' && dueDay ? Math.min(31, Math.max(1, parseInt(dueDay, 10))) : null,
       user_id: currentUserId
     }
 
@@ -216,8 +222,11 @@ export function AdvancedPanel({
       .insert({ ...payload, logo: logo || null })
       .select()
 
-    if (insertRes.error && insertRes.error.message?.includes('logo')) {
-      insertRes = await supabase.from('accounts').insert(payload).select()
+    if (insertRes.error) {
+      insertRes = await supabase
+        .from('accounts')
+        .insert({ name: cleanName, kind, user_id: currentUserId, logo: logo || null })
+        .select()
     }
 
     setAddingAccount(false)
@@ -233,6 +242,9 @@ export function AdvancedPanel({
 
     setName('')
     setLogo('')
+    setCardType('credit')
+    setClosingDay('')
+    setDueDay('')
     window.dispatchEvent(new Event('finance-data-changed'))
     window.dispatchEvent(new Event('account-logos-changed'))
     load()
@@ -246,16 +258,23 @@ export function AdvancedPanel({
     const currentUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id || 'default'
     const cleanName = editingAccount.name.trim()
 
+    const cardTypeVal = editingAccount.kind === 'card' ? (editingAccount.card_type || 'credit') : null
+    const closingVal = editingAccount.kind === 'card' && cardTypeVal !== 'debit' && editingAccount.closing_day ? Math.min(31, Math.max(1, parseInt(editingAccount.closing_day, 10))) : null
+    const dueVal = editingAccount.kind === 'card' && cardTypeVal !== 'debit' && editingAccount.due_day ? Math.min(31, Math.max(1, parseInt(editingAccount.due_day, 10))) : null
+
     let updateRes = await supabase
       .from('accounts')
       .update({
         name: cleanName,
         kind: editingAccount.kind,
+        card_type: cardTypeVal,
+        closing_day: closingVal,
+        due_day: dueVal,
         logo: editingAccount.logo || null
       })
       .eq('id', editingAccount.id)
 
-    if (updateRes.error && updateRes.error.message?.includes('logo')) {
+    if (updateRes.error) {
       updateRes = await supabase
         .from('accounts')
         .update({
@@ -433,6 +452,46 @@ export function AdvancedPanel({
                       <option value="account">Conta</option>
                       <option value="card">Cartão</option>
                     </select>
+
+                    {editingAccount.kind === 'card' && (
+                      <select
+                        value={editingAccount.card_type || 'credit'}
+                        onChange={(e) => setEditingAccount({ ...editingAccount, card_type: e.target.value })}
+                        disabled={savingEdit}
+                        title="Tipo do cartão"
+                      >
+                        <option value="credit">Crédito</option>
+                        <option value="debit">Débito</option>
+                      </select>
+                    )}
+
+                    {editingAccount.kind === 'card' && editingAccount.card_type !== 'debit' && (
+                      <>
+                        <input
+                          type="number"
+                          min="1"
+                          max="31"
+                          placeholder="Dia fecha"
+                          title="Dia de fechamento da fatura (1 a 31)"
+                          style={{ width: '85px' }}
+                          value={editingAccount.closing_day || ''}
+                          onChange={(e) => setEditingAccount({ ...editingAccount, closing_day: e.target.value })}
+                          disabled={savingEdit}
+                        />
+                        <input
+                          type="number"
+                          min="1"
+                          max="31"
+                          placeholder="Dia vence"
+                          title="Dia de vencimento da fatura (1 a 31)"
+                          style={{ width: '85px' }}
+                          value={editingAccount.due_day || ''}
+                          onChange={(e) => setEditingAccount({ ...editingAccount, due_day: e.target.value })}
+                          disabled={savingEdit}
+                        />
+                      </>
+                    )}
+
                     <select
                       value={editingAccount.logo || ''}
                       onChange={(e) => setEditingAccount({ ...editingAccount, logo: e.target.value })}
@@ -480,7 +539,24 @@ export function AdvancedPanel({
                   />
                   <div className="acc-info">
                     <strong>{acc.name}</strong>
-                    <small>{acc.kind === 'card' ? 'Cartão de crédito' : 'Conta corrente / Carteira'}</small>
+                    <div className="acc-meta-tags">
+                      {acc.kind === 'card' ? (
+                        <>
+                          <span className={`badge-pill ${acc.card_type === 'debit' ? 'badge-debit' : 'badge-credit'}`}>
+                            {acc.card_type === 'debit' ? 'Cartão de Débito' : 'Cartão de Crédito'}
+                          </span>
+                          {acc.card_type !== 'debit' && (acc.closing_day || acc.due_day) && (
+                            <small className="acc-dates-text">
+                              {acc.closing_day ? `Fecha dia ${acc.closing_day}` : ''}
+                              {acc.closing_day && acc.due_day ? ' • ' : ''}
+                              {acc.due_day ? `Vence dia ${acc.due_day}` : ''}
+                            </small>
+                          )}
+                        </>
+                      ) : (
+                        <small>Conta corrente / Carteira</small>
+                      )}
+                    </div>
                   </div>
                   <div className="acc-actions-group">
                     <button
@@ -531,6 +607,43 @@ export function AdvancedPanel({
               <option value="account">Conta</option>
               <option value="card">Cartão</option>
             </select>
+            {kind === 'card' && (
+              <select
+                value={cardType}
+                onChange={(e) => setCardType(e.target.value)}
+                disabled={addingAccount}
+                title="Tipo do cartão"
+              >
+                <option value="credit">Crédito</option>
+                <option value="debit">Débito</option>
+              </select>
+            )}
+            {kind === 'card' && cardType === 'credit' && (
+              <>
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  placeholder="Dia fecha"
+                  title="Dia de fechamento da fatura (1 a 31)"
+                  style={{ width: '90px' }}
+                  value={closingDay}
+                  onChange={(e) => setClosingDay(e.target.value)}
+                  disabled={addingAccount}
+                />
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  placeholder="Dia vence"
+                  title="Dia de vencimento da fatura (1 a 31)"
+                  style={{ width: '90px' }}
+                  value={dueDay}
+                  onChange={(e) => setDueDay(e.target.value)}
+                  disabled={addingAccount}
+                />
+              </>
+            )}
             <select
               value={logo}
               onChange={(e) => setLogo(e.target.value)}

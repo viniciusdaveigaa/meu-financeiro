@@ -4,6 +4,8 @@ import {
   ArrowUpRight,
   Calendar,
   Check,
+  CreditCard,
+  Landmark,
   Layers,
   Minus,
   Plus,
@@ -13,6 +15,7 @@ import {
 } from 'lucide-react'
 import {
   amountToInput,
+  calculateInvoiceMonth,
   changeMonth,
   formatAmountInput,
   formatMoney,
@@ -41,30 +44,37 @@ export function TransactionModal({
   yesterdayDate.setDate(yesterdayDate.getDate() - 1)
   const yesterday = localISODate(yesterdayDate)
 
-  const [draft, setDraft] = useState(() =>
-    entry
-      ? {
-          ...entry,
-          account_id: entry.account_id || '',
-          amount: amountToInput(entry.amount),
-          installment: Number(entry.installment_total) > 1,
-          installments: Number(entry.installment_total) > 1 ? Number(entry.installment_total) : 1,
-          start_month: entry.date ? entry.date.slice(0, 7) : today.slice(0, 7),
-          recurring: false
-        }
-      : {
-          type: 'expense',
-          description: '',
-          amount: '',
-          category: categories[0] || 'Alimentacao',
-          date: today,
-          account_id: '',
-          installment: false,
-          installments: 2,
-          start_month: today.slice(0, 7),
-          recurring: false
-        }
-  )
+  const [draft, setDraft] = useState(() => {
+    if (entry) {
+      const existingAccount = accounts.find((a) => a.id === entry.account_id)
+      const defaultMethod = entry.payment_method || (existingAccount?.kind === 'card' && existingAccount?.card_type !== 'debit' ? 'credit' : 'debit')
+      return {
+        ...entry,
+        account_id: entry.account_id || '',
+        payment_method: defaultMethod,
+        invoice_month: entry.invoice_month || null,
+        amount: amountToInput(entry.amount),
+        installment: Number(entry.installment_total) > 1,
+        installments: Number(entry.installment_total) > 1 ? Number(entry.installment_total) : 1,
+        start_month: entry.date ? entry.date.slice(0, 7) : today.slice(0, 7),
+        recurring: false
+      }
+    }
+    return {
+      type: 'expense',
+      description: '',
+      amount: '',
+      category: categories[0] || 'Alimentacao',
+      date: today,
+      account_id: '',
+      payment_method: 'debit',
+      invoice_month: null,
+      installment: false,
+      installments: 2,
+      start_month: today.slice(0, 7),
+      recurring: false
+    }
+  })
 
   const [saving, setSaving] = useState(false)
   const [showQuickAddCat, setShowQuickAddCat] = useState(false)
@@ -120,12 +130,20 @@ export function TransactionModal({
         title: 'Ação não permitida'
       })
     }
+    const selAccount = accounts?.find((a) => a.id === draft.account_id)
+    const isCredit = draft.type === 'expense' && selAccount?.kind === 'card' && draft.payment_method !== 'debit'
+    const computedInvMonth = isCredit
+      ? (draft.invoice_month || calculateInvoiceMonth(draft.date, selAccount?.closing_day))
+      : null
+
     setSaving(true)
     try {
       await onSave({
         ...draft,
         description: draft.description.trim(),
         amount: amountValue,
+        payment_method: isCredit ? 'credit' : (draft.payment_method || 'debit'),
+        invoice_month: computedInvMonth,
         installments: draft.installment ? installments : 1
       })
     } finally {
@@ -222,7 +240,14 @@ export function TransactionModal({
                   <input
                     type="date"
                     value={draft.date}
-                    onChange={(event) => set({ date: event.target.value })}
+                    onChange={(event) => {
+                      const newDate = event.target.value
+                      const selAccount = accounts?.find((a) => a.id === draft.account_id)
+                      const newInvMonth = selAccount?.kind === 'card' && draft.payment_method === 'credit'
+                        ? calculateInvoiceMonth(newDate, selAccount.closing_day)
+                        : draft.invoice_month
+                      set({ date: newDate, invoice_month: newInvMonth })
+                    }}
                     disabled={saving}
                     required
                   />
@@ -230,14 +255,26 @@ export function TransactionModal({
                     <button
                       type="button"
                       className={`chip ${draft.date === today ? 'active' : ''}`}
-                      onClick={() => set({ date: today })}
+                      onClick={() => {
+                        const selAccount = accounts?.find((a) => a.id === draft.account_id)
+                        const newInvMonth = selAccount?.kind === 'card' && draft.payment_method === 'credit'
+                          ? calculateInvoiceMonth(today, selAccount.closing_day)
+                          : draft.invoice_month
+                        set({ date: today, invoice_month: newInvMonth })
+                      }}
                     >
                       Hoje
                     </button>
                     <button
                       type="button"
                       className={`chip ${draft.date === yesterday ? 'active' : ''}`}
-                      onClick={() => set({ date: yesterday })}
+                      onClick={() => {
+                        const selAccount = accounts?.find((a) => a.id === draft.account_id)
+                        const newInvMonth = selAccount?.kind === 'card' && draft.payment_method === 'credit'
+                          ? calculateInvoiceMonth(yesterday, selAccount.closing_day)
+                          : draft.invoice_month
+                        set({ date: yesterday, invoice_month: newInvMonth })
+                      }}
                     >
                       Ontem
                     </button>
@@ -245,23 +282,89 @@ export function TransactionModal({
                 </div>
               </div>
 
-              {advancedReady && (
-                <label className="field">
-                  <span>Conta ou cartão</span>
-                  <select
-                    value={draft.account_id}
-                    onChange={(event) => set({ account_id: event.target.value })}
-                    disabled={saving}
-                  >
-                    <option value="">Sem conta definida</option>
-                    {accounts.map((account) => (
-                      <option key={account.id} value={account.id}>
-                        {account.name} · {account.kind === 'card' ? 'Cartão' : 'Conta'}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
+              {advancedReady && (() => {
+                const selectedAccount = accounts?.find((a) => a.id === draft.account_id)
+                return (
+                  <div className="field">
+                    <span>Conta ou cartão</span>
+                    <select
+                      value={draft.account_id}
+                      onChange={(event) => {
+                        const newAccountId = event.target.value
+                        const selAccount = accounts?.find((a) => a.id === newAccountId)
+                        if (selAccount?.kind === 'card') {
+                          const isCredit = selAccount.card_type !== 'debit'
+                          const newInvMonth = isCredit ? calculateInvoiceMonth(draft.date, selAccount.closing_day) : null
+                          set({
+                            account_id: newAccountId,
+                            payment_method: isCredit ? 'credit' : 'debit',
+                            invoice_month: newInvMonth
+                          })
+                        } else {
+                          set({
+                            account_id: newAccountId,
+                            payment_method: 'debit',
+                            invoice_month: null
+                          })
+                        }
+                      }}
+                      disabled={saving}
+                    >
+                      <option value="">Sem conta definida</option>
+                      {accounts.map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.name} · {account.kind === 'card' ? (account.card_type === 'debit' ? 'Cartão de Débito' : 'Cartão de Crédito') : 'Conta'}
+                        </option>
+                      ))}
+                    </select>
+
+                    {selectedAccount?.kind === 'card' && draft.type === 'expense' && (
+                      <div className="card-purchase-control-card">
+                        <span className="control-label-micro">Tipo de compra no cartão:</span>
+                        <div className="card-btn-pills">
+                          <button
+                            type="button"
+                            className={`card-pill-btn ${draft.payment_method !== 'debit' ? 'active' : ''}`}
+                            onClick={() => {
+                              const invMonth = calculateInvoiceMonth(draft.date, selectedAccount.closing_day)
+                              set({ payment_method: 'credit', invoice_month: invMonth })
+                            }}
+                          >
+                            <CreditCard size={14} /> Compra no Crédito
+                          </button>
+                          <button
+                            type="button"
+                            className={`card-pill-btn ${draft.payment_method === 'debit' ? 'active' : ''}`}
+                            onClick={() => {
+                              set({ payment_method: 'debit', invoice_month: null })
+                            }}
+                          >
+                            <Landmark size={14} /> Compra no Débito
+                          </button>
+                        </div>
+
+                        {draft.payment_method !== 'debit' ? (
+                          <div className="credit-invoice-info-pill">
+                            <div className="invoice-header-line">
+                              <Calendar size={13} />
+                              <span>Fatura de <strong>{formatMonthName(draft.invoice_month || calculateInvoiceMonth(draft.date, selectedAccount.closing_day))}</strong></span>
+                            </div>
+                            <small>
+                              {selectedAccount.closing_day
+                                ? `Fechamento dia ${selectedAccount.closing_day}${selectedAccount.due_day ? ` • Vencimento dia ${selectedAccount.due_day}` : ''}. Não reduz o saldo em conta bancária agora.`
+                                : 'Lançado na fatura em aberto. Não reduz o saldo disponível imediatamente.'}
+                            </small>
+                          </div>
+                        ) : (
+                          <small className="debit-info-hint-text">
+                            Descontará imediatamente do saldo da conta bancária.
+                          </small>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Coluna Direita: Categorias e Opções Avançadas */}

@@ -67,6 +67,7 @@ export function TransactionList({
     const query = searchableText(search.trim())
     return entries
       .filter((item) => {
+        if (item.show_in_statement === false) return false
         const neutral = item.affects_balance === false
         if (typeFilter === 'income' && (item.type !== 'income' || neutral)) return false
         if (typeFilter === 'expense' && (item.type !== 'expense' || neutral)) return false
@@ -335,6 +336,7 @@ export function TransactionList({
       {csvModalOpen && (
         <CsvImportModal
           accounts={accounts}
+          entries={entries}
           onClose={() => setCsvModalOpen(false)}
         />
       )}

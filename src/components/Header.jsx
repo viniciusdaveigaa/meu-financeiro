@@ -3,6 +3,7 @@ import {
   CircleHelp,
   LayoutDashboard,
   LogOut,
+  Palette,
   Plus,
   ReceiptText,
   Settings,
@@ -20,6 +21,7 @@ export function Header({
   onNewTransaction,
   onOpenSettings,
   onOpenPrivacy,
+  onOpenCustomization,
   onSignOut
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -128,6 +130,17 @@ export function Header({
                   >
                     <Settings size={16} />
                     <span>Configurações da Conta</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="dropdown-item"
+                    onClick={() => {
+                      setUserMenuOpen(false)
+                      onOpenCustomization?.()
+                    }}
+                  >
+                    <Palette size={16} />
+                    <span>Personalização de Cores</span>
                   </button>
                   <button
                     type="button"

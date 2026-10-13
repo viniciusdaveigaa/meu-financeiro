@@ -153,3 +153,22 @@ export function searchableText(value) {
     .toLowerCase()
 }
 
+/**
+ * Determina o mês da fatura ('YYYY-MM') com base na data da compra e no dia de fechamento.
+ * Se o dia da compra for maior que o dia de fechamento, a compra entra na próxima fatura.
+ */
+export function calculateInvoiceMonth(purchaseDateStr, closingDay) {
+  if (!purchaseDateStr) return getMonthKey()
+  const parts = purchaseDateStr.split('-')
+  if (parts.length < 3) return getMonthKey()
+  const [yearStr, monthStr, dayStr] = parts
+  const baseMonth = `${yearStr}-${monthStr}`
+  const day = parseInt(dayStr, 10)
+  const close = parseInt(closingDay, 10)
+
+  if (close && day > close) {
+    return changeMonth(baseMonth, 1)
+  }
+  return baseMonth
+}
+
