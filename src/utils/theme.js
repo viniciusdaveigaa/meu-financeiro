@@ -234,6 +234,8 @@ export function applyTheme(theme) {
   root.style.setProperty('--brand-accent', accent)
   root.style.setProperty('--brand-selected-bg', selected)
   root.style.setProperty('--brand-interactive', interactive)
+  root.style.setProperty('--primary', accent)
+  root.style.setProperty('--accent', accent)
   root.style.setProperty('--primary-contrast', getContrastColor(primary))
   root.style.setProperty('--accent-contrast', getContrastColor(accent))
   root.style.setProperty('--brand-accent-contrast', getContrastColor(accent))

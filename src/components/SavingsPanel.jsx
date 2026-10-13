@@ -487,7 +487,7 @@ export function SavingsPanel({ userId, accounts = [] }) {
                         <small className="pct">{Math.round(progress)}%</small>
                       </div>
                       <div className="bar-track">
-                        <i style={{ width: `${progress}%`, background: 'var(--emerald-600, #1f9d6b)' }} />
+                        <i style={{ width: `${progress}%`, background: 'var(--brand-accent, var(--emerald-600, #1f9d6b))' }} />
                       </div>
                     </div>
                   ) : (
