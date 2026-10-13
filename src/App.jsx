@@ -976,28 +976,32 @@ function MainDashboard({ session, onSignOut }) {
       )}
 
       {/* News Quick Popup Sheet */}
-      <NewsPopup
-        isOpen={newsPopupOpen}
-        onClose={() => setNewsPopupOpen(false)}
-        updates={appUpdates}
-        unreadCount={unreadNewsCount}
-        onMarkAsRead={handleMarkUpdateAsRead}
-        onMarkAllAsRead={handleMarkAllUpdatesAsRead}
-        onOpenFullHistory={() => {
-          setNewsPopupOpen(false)
-          setNewsHistoryOpen(true)
-        }}
-      />
+      {newsPopupOpen && (
+        <NewsPopup
+          isOpen={true}
+          onClose={() => setNewsPopupOpen(false)}
+          updates={appUpdates}
+          unreadCount={unreadNewsCount}
+          onMarkAsRead={handleMarkUpdateAsRead}
+          onMarkAllAsRead={handleMarkAllUpdatesAsRead}
+          onOpenFullHistory={() => {
+            setNewsPopupOpen(false)
+            setNewsHistoryOpen(true)
+          }}
+        />
+      )}
 
       {/* News Full History Modal */}
-      <NewsHistoryModal
-        isOpen={newsHistoryOpen}
-        onClose={() => setNewsHistoryOpen(false)}
-        updates={appUpdates}
-        unreadCount={unreadNewsCount}
-        onMarkAsRead={handleMarkUpdateAsRead}
-        onMarkAllAsRead={handleMarkAllUpdatesAsRead}
-      />
+      {newsHistoryOpen && (
+        <NewsHistoryModal
+          isOpen={true}
+          onClose={() => setNewsHistoryOpen(false)}
+          updates={appUpdates}
+          unreadCount={unreadNewsCount}
+          onMarkAsRead={handleMarkUpdateAsRead}
+          onMarkAllAsRead={handleMarkAllUpdatesAsRead}
+        />
+      )}
     </div>
   )
 }

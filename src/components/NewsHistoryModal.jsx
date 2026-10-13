@@ -23,7 +23,7 @@ export function NewsHistoryModal({
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
 
-  if (!isOpen) return null
+  const safeUpdates = Array.isArray(updates) ? updates : []
 
   const categories = [
     { id: 'all', label: 'Todas' },
@@ -34,19 +34,23 @@ export function NewsHistoryModal({
   ]
 
   const filteredUpdates = useMemo(() => {
-    return updates.filter((item) => {
+    return safeUpdates.filter((item) => {
+      if (!item) return false
       const matchesCategory =
         selectedCategory === 'all' || item.category === selectedCategory
 
+      const query = (searchQuery || '').trim().toLowerCase()
       const matchesSearch =
-        !searchQuery.trim() ||
-        item.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.version?.toLowerCase().includes(searchQuery.toLowerCase())
+        !query ||
+        (item.title && item.title.toLowerCase().includes(query)) ||
+        (item.description && item.description.toLowerCase().includes(query)) ||
+        (item.version && item.version.toLowerCase().includes(query))
 
       return matchesCategory && matchesSearch
     })
-  }, [updates, selectedCategory, searchQuery])
+  }, [safeUpdates, selectedCategory, searchQuery])
+
+  if (!isOpen) return null
 
   const formatDate = (isoString) => {
     try {
@@ -222,7 +226,7 @@ export function NewsHistoryModal({
         <footer className="modal-foot news-history-footer">
           <div className="history-footer-summary">
             <span>
-              Exibindo <strong>{filteredUpdates.length}</strong> de {updates.length} atualizações registradas
+              Exibindo <strong>{filteredUpdates.length}</strong> de {safeUpdates.length} atualizações registradas
             </span>
           </div>
           <button

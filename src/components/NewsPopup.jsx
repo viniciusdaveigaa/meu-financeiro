@@ -22,8 +22,9 @@ export function NewsPopup({
 }) {
   if (!isOpen) return null
 
+  const safeUpdates = Array.isArray(updates) ? updates : []
   // Exibe as 4 novidades mais recentes no painel rápido
-  const recentUpdates = updates.slice(0, 4)
+  const recentUpdates = safeUpdates.slice(0, 4)
 
   const formatDate = (isoString) => {
     try {

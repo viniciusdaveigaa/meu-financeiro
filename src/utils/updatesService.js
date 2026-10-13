@@ -34,7 +34,7 @@ export const INITIAL_UPDATES_SEED = [
   {
     id: 'seed-upd-4',
     title: 'Logos Oficiais das Instituições Financeiras em SVG',
-    description: 'Revisão visual completa das marcas bancárias com vetores oficiais autênticos em alta definição para Nubank, Itaú, Bradesco, Santander, Banco do Brasil, Inter, Caixa Econômica, C6 Bank, PicPay, Mercado Pago, BTG, Neon, Sicoob e Sicredi, com suporte a códigos COMPE e fallback seguro.',
+    description: 'Revisão visual completa das marcas bancárias com vetores oficiais autênticos em alta definição para as principais instituições financeiras brasileiras (Banco do Brasil, Itaú, Bradesco, Santander, Caixa, Inter, C6 Bank e outras), com suporte a códigos COMPE e fallback seguro.',
     category: 'improvement',
     version: '2.1.0',
     published_at: '2026-10-13T14:00:00Z',
