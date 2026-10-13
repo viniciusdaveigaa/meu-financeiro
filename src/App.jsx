@@ -34,7 +34,7 @@ import {
   markUpdateAsRead,
   markAllUpdatesAsRead
 } from './utils/updatesService'
-import { syncUserTheme } from './utils/theme'
+import { syncUserTheme, getSavedTheme } from './utils/theme'
 
 import {
   getMonthKey,
@@ -1007,18 +1007,69 @@ function MainDashboard({ session, onSignOut }) {
 }
 
 function LoadingScreen() {
+  const [theme, setTheme] = useState(() => getSavedTheme())
+  const [phase, setPhase] = useState(0)
+
+  useEffect(() => {
+    const handleThemeChange = (event) => {
+      if (event?.detail) {
+        setTheme(event.detail)
+      }
+    }
+    window.addEventListener('app-theme-changed', handleThemeChange)
+
+    const timer1 = setTimeout(() => setPhase(1), 850)
+    const timer2 = setTimeout(() => setPhase(2), 1750)
+
+    return () => {
+      window.removeEventListener('app-theme-changed', handleThemeChange)
+      clearTimeout(timer1)
+      clearTimeout(timer2)
+    }
+  }, [])
+
+  const tips = [
+    'Carregando suas preferências...',
+    'Sincronizando dados com segurança...',
+    'Quase pronto para começar!'
+  ]
+
+  const screenStyle = {
+    '--screen-dark': theme?.darkElementsColor || 'var(--brand-dark, #0a251f)',
+    '--screen-primary': theme?.primaryColor || 'var(--brand-primary, #10382f)',
+    '--screen-accent': theme?.accentColor || 'var(--brand-accent, #1f9d6b)',
+    '--screen-interactive': theme?.interactiveColor || 'var(--brand-interactive, #164e40)'
+  }
+
+  const isCustomOrNonDefault = theme?.name && theme?.id !== 'emerald'
+
   return (
-    <main className="loading-screen-modern">
-      <div className="loading-glow" />
-      <Logo light />
+    <main
+      className="loading-screen-modern"
+      style={screenStyle}
+      role="status"
+      aria-live="polite"
+    >
+      <div className="loading-glow" aria-hidden="true" />
+      <div className="loading-top-logo">
+        <Logo light />
+      </div>
       <div className="loading-center-content">
-        <span className="badge-pill">SINCRONIZANDO</span>
+        <span className="loading-badge-pill">
+          <span className="loading-badge-dot" />
+          {isCustomOrNonDefault
+            ? `SINCRONIZANDO • ${theme.name.toUpperCase()}`
+            : 'SINCRONIZANDO'}
+        </span>
         <h1>Preparando seu painel...</h1>
-        <div className="loading-bar-track">
+        <div className="loading-bar-track" aria-hidden="true">
           <div className="loading-bar-fill" />
         </div>
       </div>
-      <span className="loading-tip">Carregando seus dados com segurança</span>
+      <span className="loading-tip">
+        <span className="loading-spinner-micro" aria-hidden="true" />
+        {tips[phase] || tips[0]}
+      </span>
     </main>
   )
 }
@@ -1048,8 +1099,11 @@ function AppContent() {
     clearTimeout(timerRef.current)
     setSession(next)
     if (!showTransition) return setTransitioning(false)
+    if (next?.user?.id) {
+      syncUserTheme(next.user.id).catch(() => {})
+    }
     setTransitioning(true)
-    timerRef.current = setTimeout(() => setTransitioning(false), 1500)
+    timerRef.current = setTimeout(() => setTransitioning(false), 2500)
   }
 
   useEffect(() => {
@@ -1058,15 +1112,32 @@ function AppContent() {
       return
     }
 
+    const startTime = Date.now()
+    const MIN_LOADING_TIME = 2500 // Delay aumentado elegante para exibição completa da animação
+
     supabase.auth
       .getSession()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (data?.session) {
           setSession(data.session)
+          if (data.session.user?.id) {
+            try {
+              await syncUserTheme(data.session.user.id)
+            } catch (err) {
+              console.warn('Erro ao sincronizar tema inicial:', err)
+            }
+          }
         }
       })
+      .catch((err) => {
+        console.error('Erro ao carregar sessão inicial:', err)
+      })
       .finally(() => {
-        setInitialLoading(false)
+        const elapsed = Date.now() - startTime
+        const remaining = Math.max(0, MIN_LOADING_TIME - elapsed)
+        timerRef.current = setTimeout(() => {
+          setInitialLoading(false)
+        }, remaining)
       })
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, next) => {
@@ -1074,7 +1145,9 @@ function AppContent() {
         beginSession(null, false)
       } else if (event === 'SIGNED_IN' && next) {
         setSession(next)
-        setInitialLoading(false)
+        if (next.user?.id) {
+          syncUserTheme(next.user.id).catch(() => {})
+        }
       } else if ((event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && next) {
         setSession(next)
       }
