@@ -179,3 +179,4 @@ export function initTheme() {
   applyTheme(current)
   return current
 }
+

@@ -22,9 +22,18 @@ import { UsageGuide } from './components/UsageGuide'
 import { SettingsModal } from './components/SettingsModal'
 import { PrivacyTermsModal } from './components/PrivacyTermsModal'
 import { ThemeCustomizationModal } from './components/ThemeCustomizationModal'
+import { ConsentPromptModal } from './components/ConsentPromptModal'
+import { NewsPopup } from './components/NewsPopup'
+import { NewsHistoryModal } from './components/NewsHistoryModal'
 import { SignOutScreen } from './components/SignOutScreen'
 import { MobileNav } from './components/MobileNav'
 import { Logo } from './components/ui'
+import { checkUserConsentStatus, recordUserConsent } from './utils/consentService'
+import {
+  fetchAppUpdates,
+  markUpdateAsRead,
+  markAllUpdatesAsRead
+} from './utils/updatesService'
 
 import {
   getMonthKey,
@@ -75,6 +84,93 @@ function MainDashboard({ session, onSignOut }) {
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false)
   const [customizationModalOpen, setCustomizationModalOpen] = useState(false)
   const [userName, setUserName] = useState(() => session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || '')
+
+  // Consent & Terms gate states
+  const [consentRequired, setConsentRequired] = useState(false)
+  const [isConsentUpdate, setIsConsentUpdate] = useState(false)
+  const [previousConsent, setPreviousConsent] = useState(null)
+
+  // News and Updates system states
+  const [newsPopupOpen, setNewsPopupOpen] = useState(false)
+  const [newsHistoryOpen, setNewsHistoryOpen] = useState(false)
+  const [appUpdates, setAppUpdates] = useState([])
+  const [unreadNewsCount, setUnreadNewsCount] = useState(0)
+
+  // Sincronização do Consentimento
+  useEffect(() => {
+    if (!session?.user?.id) return
+
+    let isMounted = true
+    const checkConsent = async () => {
+      try {
+        const status = await checkUserConsentStatus(session.user.id)
+        if (!isMounted) return
+        if (!status.hasValidConsent) {
+          setConsentRequired(true)
+          setIsConsentUpdate(Boolean(status.isUpdatePrompt))
+          setPreviousConsent(status.latestConsent)
+        } else {
+          setConsentRequired(false)
+        }
+      } catch (err) {
+        console.error('Erro ao verificar consentimento:', err)
+      }
+    }
+
+    checkConsent()
+
+    const onConsentChanged = () => checkConsent()
+    window.addEventListener('consent-updated', onConsentChanged)
+    return () => {
+      isMounted = false
+      window.removeEventListener('consent-updated', onConsentChanged)
+    }
+  }, [session?.user?.id])
+
+  const handleAcceptConsent = async () => {
+    if (!session?.user?.id) return
+    await recordUserConsent(session.user.id)
+    setConsentRequired(false)
+  }
+
+  // Sincronização de Novidades
+  const loadNews = async () => {
+    if (!session?.user?.id) return
+    try {
+      const res = await fetchAppUpdates(session.user.id)
+      setAppUpdates(res.updates)
+      setUnreadNewsCount(res.unreadCount)
+    } catch (err) {
+      console.error('Erro ao carregar novidades:', err)
+    }
+  }
+
+  useEffect(() => {
+    loadNews()
+
+    const onNewsChanged = () => loadNews()
+    window.addEventListener('news-updated', onNewsChanged)
+    return () => {
+      window.removeEventListener('news-updated', onNewsChanged)
+    }
+  }, [session?.user?.id])
+
+  const handleMarkUpdateAsRead = async (updateId) => {
+    if (!session?.user?.id) return
+    await markUpdateAsRead(session.user.id, updateId)
+    setAppUpdates((prev) =>
+      prev.map((u) => (u.id === updateId ? { ...u, isRead: true } : u))
+    )
+    setUnreadNewsCount((prev) => Math.max(0, prev - 1))
+  }
+
+  const handleMarkAllUpdatesAsRead = async () => {
+    if (!session?.user?.id || !appUpdates.length) return
+    const ids = appUpdates.map((u) => u.id)
+    await markAllUpdatesAsRead(session.user.id, ids)
+    setAppUpdates((prev) => prev.map((u) => ({ ...u, isRead: true })))
+    setUnreadNewsCount(0)
+  }
 
   const loadConfig = async () => {
     if (!session?.user?.id) return
@@ -575,6 +671,9 @@ function MainDashboard({ session, onSignOut }) {
         onOpenSettings={() => setSettingsModalOpen(true)}
         onOpenPrivacy={() => setPrivacyModalOpen(true)}
         onOpenCustomization={() => setCustomizationModalOpen(true)}
+        unreadNewsCount={unreadNewsCount}
+        onOpenNewsPopup={() => setNewsPopupOpen(true)}
+        onOpenNewsHistory={() => setNewsHistoryOpen(true)}
         onSignOut={onSignOut}
       />
 
@@ -825,6 +924,7 @@ function MainDashboard({ session, onSignOut }) {
             session?.user?.identities?.some((i) => i.provider === 'google')
           }
           onClose={() => setSettingsModalOpen(false)}
+          onOpenPrivacy={() => setPrivacyModalOpen(true)}
           onProfileUpdated={({ name: newN }) => {
             if (newN) {
               setUserName(newN)
@@ -835,7 +935,10 @@ function MainDashboard({ session, onSignOut }) {
 
       {/* Privacy & Terms Modal */}
       {privacyModalOpen && (
-        <PrivacyTermsModal onClose={() => setPrivacyModalOpen(false)} />
+        <PrivacyTermsModal
+          userId={session?.user?.id}
+          onClose={() => setPrivacyModalOpen(false)}
+        />
       )}
 
       {/* Theme Customization Modal */}
@@ -845,6 +948,40 @@ function MainDashboard({ session, onSignOut }) {
           onClose={() => setCustomizationModalOpen(false)}
         />
       )}
+
+      {/* Consent & Terms Gate Modal (Bloqueio mandatório até aceitação explícita) */}
+      {consentRequired && (
+        <ConsentPromptModal
+          isUpdatePrompt={isConsentUpdate}
+          previousConsent={previousConsent}
+          onAccept={handleAcceptConsent}
+          onSignOut={onSignOut}
+        />
+      )}
+
+      {/* News Quick Popup Sheet */}
+      <NewsPopup
+        isOpen={newsPopupOpen}
+        onClose={() => setNewsPopupOpen(false)}
+        updates={appUpdates}
+        unreadCount={unreadNewsCount}
+        onMarkAsRead={handleMarkUpdateAsRead}
+        onMarkAllAsRead={handleMarkAllUpdatesAsRead}
+        onOpenFullHistory={() => {
+          setNewsPopupOpen(false)
+          setNewsHistoryOpen(true)
+        }}
+      />
+
+      {/* News Full History Modal */}
+      <NewsHistoryModal
+        isOpen={newsHistoryOpen}
+        onClose={() => setNewsHistoryOpen(false)}
+        updates={appUpdates}
+        unreadCount={unreadNewsCount}
+        onMarkAsRead={handleMarkUpdateAsRead}
+        onMarkAllAsRead={handleMarkAllUpdatesAsRead}
+      />
     </div>
   )
 }

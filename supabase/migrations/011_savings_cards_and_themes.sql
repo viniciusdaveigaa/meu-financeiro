@@ -117,3 +117,4 @@ grant execute on function public.withdraw_savings_v2(uuid, numeric, date, boolea
 -- 4. Preferências de Tema e Cores no Perfil do Usuário
 alter table public.profiles
 add column if not exists theme_preferences jsonb;
+

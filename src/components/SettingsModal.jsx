@@ -4,16 +4,19 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
+  FileText,
   KeyRound,
   Lock,
   Mail,
   Save,
+  Scale,
   ShieldCheck,
   User,
   X
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import { greeting, validatePasswordStrength } from '../utils/formatters'
+import { CURRENT_LEGAL_DATE, CURRENT_TERMS_VERSION } from '../constants/legalDocuments'
 
 export function SettingsModal({
   currentName = '',
@@ -21,7 +24,8 @@ export function SettingsModal({
   userId = '',
   isGoogleUser = false,
   onClose,
-  onProfileUpdated
+  onProfileUpdated,
+  onOpenPrivacy
 }) {
   const [activeTab, setActiveTab] = useState('profile') // 'profile' | 'email' | 'password'
 
@@ -227,6 +231,14 @@ export function SettingsModal({
           >
             <Lock size={15} />
             <span>Senha</span>
+          </button>
+          <button
+            type="button"
+            className={`settings-tab-btn ${activeTab === 'privacy' ? 'active' : ''}`}
+            onClick={() => setActiveTab('privacy')}
+          >
+            <ShieldCheck size={15} />
+            <span>Privacidade & Termos</span>
           </button>
         </div>
 
@@ -535,6 +547,55 @@ export function SettingsModal({
                 </div>
               </form>
             )
+          )}
+
+          {/* TAB 4: PRIVACIDADE E TERMOS */}
+          {activeTab === 'privacy' && (
+            <div className="settings-privacy-tab-pane">
+              <div className="privacy-card-summary">
+                <div className="privacy-card-badge">
+                  <ShieldCheck size={22} className="text-emerald" />
+                  <div>
+                    <strong>Governança de Privacidade & Termos</strong>
+                    <small>Seus dados financeiros isolados e protegidos por design</small>
+                  </div>
+                </div>
+                <div className="consent-detail-meta">
+                  <span>Versão vigente: <strong>v{CURRENT_TERMS_VERSION}</strong></span>
+                  <span>Data de vigência: <strong>{CURRENT_LEGAL_DATE}</strong></span>
+                </div>
+              </div>
+
+              <div className="privacy-data-info-block">
+                <h5>Dados vinculados à sua conta:</h5>
+                <p>
+                  O seu e-mail, nome, contas cadastradas, caixinhas e lançamentos são de acesso exclusivo seu via <strong>Row Level Security (RLS)</strong> no banco de dados. Nós não comercializamos e não compartilhamos suas informações com birôs de crédito ou redes de publicidade.
+                </p>
+              </div>
+
+              <div className="privacy-quick-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    onClose()
+                    if (onOpenPrivacy) onOpenPrivacy()
+                  }}
+                >
+                  <FileText size={15} />
+                  <span>Consultar Termos de Uso e Política Completos</span>
+                </button>
+              </div>
+
+              <div className="privacy-rights-notice">
+                <h5>Seus direitos fundamentais (LGPD Art. 18):</h5>
+                <ul>
+                  <li><strong>Portabilidade de Dados:</strong> Baixe todos os seus lançamentos em formato CSV através da aba Extrato a qualquer momento.</li>
+                  <li><strong>Correção e Atualização:</strong> Edite seus registros e dados cadastrais diretamente pelo aplicativo.</li>
+                  <li><strong>Eliminação e Exclusão Total:</strong> Remova movimentações individualmente com efeito imediato ou solicite o expurgo definitivo de sua conta.</li>
+                </ul>
+              </div>
+            </div>
           )}
         </div>
       </div>

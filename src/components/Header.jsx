@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  Bell,
   CircleHelp,
   LayoutDashboard,
   LogOut,
@@ -8,6 +9,7 @@ import {
   ReceiptText,
   Settings,
   ShieldCheck,
+  Sparkles,
   Target
 } from 'lucide-react'
 import { supabase } from '../supabase'
@@ -22,6 +24,9 @@ export function Header({
   onOpenSettings,
   onOpenPrivacy,
   onOpenCustomization,
+  unreadNewsCount = 0,
+  onOpenNewsPopup,
+  onOpenNewsHistory,
   onSignOut
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -76,6 +81,22 @@ export function Header({
         <div className="topbar-actions">
           {/* Nubank-style Privacy Eye button */}
           <PrivacyToggle size={20} />
+
+          {/* Central de Novidades (Sino com Badge de Não Lidas) */}
+          <button
+            type="button"
+            className={`topbar-icon-btn news-bell-btn ${unreadNewsCount > 0 ? 'has-unread' : ''}`}
+            onClick={onOpenNewsPopup}
+            title={unreadNewsCount > 0 ? `${unreadNewsCount} novidades não lidas` : 'Novidades e Atualizações'}
+            aria-label="Novidades e atualizações do sistema"
+          >
+            <Bell size={19} />
+            {unreadNewsCount > 0 && (
+              <span className="news-badge-count">
+                {unreadNewsCount > 9 ? '9+' : unreadNewsCount}
+              </span>
+            )}
+          </button>
 
           {/* Quick New Transaction button */}
           <button
@@ -141,6 +162,20 @@ export function Header({
                   >
                     <Palette size={16} />
                     <span>Personalização de Cores</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="dropdown-item"
+                    onClick={() => {
+                      setUserMenuOpen(false)
+                      onOpenNewsHistory?.()
+                    }}
+                  >
+                    <Sparkles size={16} />
+                    <span>Novidades do Sistema</span>
+                    {unreadNewsCount > 0 && (
+                      <span className="dropdown-badge-pill">{unreadNewsCount}</span>
+                    )}
                   </button>
                   <button
                     type="button"
