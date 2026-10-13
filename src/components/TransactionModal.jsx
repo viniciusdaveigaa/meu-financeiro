@@ -293,7 +293,7 @@ export function TransactionModal({
                           logoId={selectedAccount.logo}
                           accountName={selectedAccount.name}
                           kind={selectedAccount.kind}
-                          size={18}
+                          size={24}
                         />
                       )}
                       Conta ou cartão

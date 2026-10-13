@@ -295,7 +295,7 @@ export function TransactionList({
                                   logoId={account.logo}
                                   accountName={account.name}
                                   kind={account.kind}
-                                  size={15}
+                                  size={20}
                                 />
                                 <span>{account.name}</span>
                               </span>

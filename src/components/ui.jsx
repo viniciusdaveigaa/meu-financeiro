@@ -101,7 +101,7 @@ export function BankLogoBadge({ logoId, accountName = '', kind = 'account', size
       style={{
         width: size,
         height: size,
-        borderRadius: Math.round(size * 0.26),
+        borderRadius: Math.max(4, Math.round(size * 0.24)),
         ...(!hasLogoUrl && logo?.bg ? { background: logo.bg, color: logo.color } : {})
       }}
       title={logo?.name || 'Instituição Bancária'}
@@ -116,11 +116,11 @@ export function BankLogoBadge({ logoId, accountName = '', kind = 'account', size
           onError={() => setImgError(true)}
         />
       ) : Icon ? (
-        <Icon size={Math.round(size * 0.52)} strokeWidth={2.2} />
+        <Icon size={Math.round(size * 0.58)} strokeWidth={2.2} />
       ) : (
         <span
           className="bank-logo-text"
-          style={{ fontSize: Math.max(9, Math.round(size * 0.34)) }}
+          style={{ fontSize: Math.max(9, Math.round(size * 0.38)) }}
         >
           {logo?.shortLabel || logo?.name?.slice(0, 3) || 'BCO'}
         </span>

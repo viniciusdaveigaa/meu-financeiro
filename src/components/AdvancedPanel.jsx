@@ -535,7 +535,7 @@ export function AdvancedPanel({
                     logoId={acc.logo}
                     accountName={acc.name}
                     kind={acc.kind}
-                    size={36}
+                    size={42}
                   />
                   <div className="acc-info">
                     <strong>{acc.name}</strong>
