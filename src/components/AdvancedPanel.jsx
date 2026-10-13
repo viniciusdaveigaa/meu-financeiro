@@ -594,7 +594,7 @@ export function AdvancedPanel({
             <input
               type="text"
               required
-              placeholder="Nome (ex: Nubank, Inter)"
+              placeholder="Nome (ex: Cartão Principal, Banco Digital)"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={addingAccount}

@@ -131,7 +131,7 @@ export function Header({
 
         {/* Action controls */}
         <div className="topbar-actions">
-          {/* Nubank-style Privacy Eye button */}
+          {/* Botão de Modo Privacidade de Valores */}
           <PrivacyToggle size={20} />
 
           {/* Central de Novidades (Sino com Badge de Não Lidas) */}

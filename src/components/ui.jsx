@@ -5,7 +5,7 @@ import { useCategories } from '../context/CategoryContext'
 import { formatMoney } from '../utils/formatters'
 import { resolveBankLogo } from '../constants/bankLogos'
 
-/** Valor monetário que respeita o modo privacidade (barra cinza, como no Nubank). */
+/** Valor monetário que respeita o modo privacidade (barra cinza mascarada). */
 export function Money({ value, prefix = '', className = '' }) {
   const { hidden } = usePrivacy()
   if (hidden) return <span className={`money-mask ${className}`} role="img" aria-label="Valor oculto" />

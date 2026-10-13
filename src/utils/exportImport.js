@@ -70,10 +70,10 @@ export function downloadSampleCsv() {
     [
       'Data;Tipo;Descrição;Categoria;Valor;Conta',
       '2026-10-05;Receita;Salário Mensal;Salário;5000,00;Conta Corrente',
-      '2026-10-08;Despesa;Supermercado;Alimentação;380,50;Cartão Nubank',
-      '2026-10-12;Despesa;Combustível Posto;Transporte;150,00;Conta Inter',
+      '2026-10-08;Despesa;Supermercado;Alimentação;380,50;Cartão de Crédito',
+      '2026-10-12;Despesa;Combustível Posto;Transporte;150,00;Banco Digital',
       '2026-10-15;Despesa;Farmácia;Saúde;85,90;Carteira',
-      '2026-10-20;Despesa;Assinatura Streaming;Assinaturas;49,90;Cartão Nubank'
+      '2026-10-20;Despesa;Assinatura Streaming;Assinaturas;49,90;Cartão de Crédito'
     ].join('\r\n')
 
   const blob = new Blob([sampleContent], { type: 'text/csv;charset=utf-8;' })

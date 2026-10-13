@@ -59,7 +59,7 @@ body {
 }
 
 /* =========================================================
-   NUBANK-STYLE MONEY MASK & PRIVACY TOGGLE
+   MONEY MASK & PRIVACY TOGGLE
    ========================================================= */
 .money-mask {
   display: inline-block;
@@ -4737,6 +4737,204 @@ body.theme-dark .bank-logo-badge.has-logo-img,
   font-size: 12.5px;
   color: var(--text-muted);
   line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+/* Guide Toolbar, Search & Category Filter Pills */
+.guide-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.guide-search-wrapper {
+  position: relative;
+  max-width: 520px;
+  width: 100%;
+}
+
+.guide-search-input {
+  width: 100%;
+  padding: 12px 14px 12px 42px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: #ffffff;
+  font-size: 14px;
+  color: var(--text-main);
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.guide-search-input:focus {
+  outline: none;
+  border-color: var(--emerald-600);
+  box-shadow: 0 0 0 3px rgba(31, 157, 107, 0.15);
+}
+
+.guide-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-subtle);
+  pointer-events: none;
+}
+
+.guide-search-clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-subtle);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.guide-search-clear:hover {
+  color: var(--text-main);
+}
+
+.guide-categories-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.guide-category-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--border-light);
+  background: #ffffff;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.guide-category-btn:hover {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  border-color: var(--emerald-300);
+}
+
+.guide-category-btn.active {
+  background: var(--emerald-900);
+  color: #ffffff;
+  border-color: var(--emerald-900);
+  box-shadow: 0 2px 4px rgba(16, 56, 47, 0.15);
+}
+
+.guide-category-count-badge {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.guide-topic-card {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.guide-topic-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.guide-topic-badge {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--bg-subtle);
+  color: var(--text-subtle);
+}
+
+.guide-topic-badge.badge-recent {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.guide-topic-steps {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.guide-step-item {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  line-height: 1.45;
+}
+
+.guide-step-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--emerald-600);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.guide-empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  margin-bottom: 24px;
+}
+
+.guide-empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  color: var(--text-subtle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px auto;
+}
+
+.guide-empty-state h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.guide-empty-state p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .guide-security-notice {
@@ -4751,6 +4949,7 @@ body.theme-dark .bank-logo-badge.has-logo-img,
 
 .sec-icon {
   color: var(--emerald-700);
+  flex-shrink: 0;
 }
 
 /* =========================================================
@@ -5012,7 +5211,7 @@ body.theme-dark .bank-logo-badge.has-logo-img,
     width: 100%;
   }
 
-  /* 4. Metric Cards (Nubank style 2-col strip) */
+  /* 4. Metric Cards (2-col responsive strip) */
   .metrics {
     grid-template-columns: 1fr;
     gap: 12px;

@@ -689,7 +689,15 @@ function MainDashboard({ session, onSignOut }) {
       <main className="app-main-content">
         {/* If Guide Tab */}
         {activeTab === 'guide' ? (
-          <UsageGuide onGoToDashboard={() => setActiveTab('dashboard')} />
+          <UsageGuide
+            onGoToDashboard={() => setActiveTab('dashboard')}
+            onNavigateTab={setActiveTab}
+            onOpenSettings={() => setSettingsModalOpen(true)}
+            onOpenCustomization={() => setCustomizationModalOpen(true)}
+            onOpenPrivacy={() => setPrivacyModalOpen(true)}
+            onOpenNews={() => setNewsHistoryOpen(true)}
+            onNewTransaction={() => setModal({})}
+          />
         ) : (
           <>
             {/* Top Period Selector Bar */}
