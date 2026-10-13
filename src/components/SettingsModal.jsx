@@ -206,39 +206,61 @@ export function SettingsModal({
           </button>
         </header>
 
-        {/* Settings SubTabs */}
-        <div className="settings-nav-tabs">
+        {/* Settings Navigation Cards Grid (Padronizado) */}
+        <div className="settings-cards-grid" role="tablist" aria-label="Opções de configurações da conta">
+          {/* Card 1: Dados da conta */}
           <button
             type="button"
-            className={`settings-tab-btn ${activeTab === 'profile' ? 'active' : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'profile'}
+            className={`settings-nav-card ${activeTab === 'profile' ? 'active' : ''}`}
             onClick={() => setActiveTab('profile')}
           >
-            <User size={15} />
-            <span>Perfil</span>
+            <div className="settings-card-icon-box">
+              <User size={18} />
+            </div>
+            <div className="settings-card-content">
+              <strong className="settings-card-title">Dados da conta</strong>
+              <span className="settings-card-desc">Nome de exibição</span>
+            </div>
           </button>
+
+          {/* Card 2: E-mail */}
           <button
             type="button"
-            className={`settings-tab-btn ${activeTab === 'email' ? 'active' : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'email'}
+            className={`settings-nav-card ${activeTab === 'email' ? 'active' : ''}`}
             onClick={() => setActiveTab('email')}
           >
-            <Mail size={15} />
-            <span>E-mail</span>
+            <div className="settings-card-icon-box">
+              <Mail size={18} />
+            </div>
+            <div className="settings-card-content">
+              <strong className="settings-card-title">E-mail</strong>
+              <span className="settings-card-desc">
+                {isGoogleUser ? 'Conta Google' : 'E-mail de acesso'}
+              </span>
+            </div>
           </button>
+
+          {/* Card 3: Senha */}
           <button
             type="button"
-            className={`settings-tab-btn ${activeTab === 'password' ? 'active' : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'password'}
+            className={`settings-nav-card ${activeTab === 'password' ? 'active' : ''}`}
             onClick={() => setActiveTab('password')}
           >
-            <Lock size={15} />
-            <span>Senha</span>
-          </button>
-          <button
-            type="button"
-            className={`settings-tab-btn ${activeTab === 'privacy' ? 'active' : ''}`}
-            onClick={() => setActiveTab('privacy')}
-          >
-            <ShieldCheck size={15} />
-            <span>Privacidade & Termos</span>
+            <div className="settings-card-icon-box">
+              <Lock size={18} />
+            </div>
+            <div className="settings-card-content">
+              <strong className="settings-card-title">Senha</strong>
+              <span className="settings-card-desc">
+                {isGoogleUser ? 'Login Google' : 'Chave de segurança'}
+              </span>
+            </div>
           </button>
         </div>
 
@@ -598,6 +620,21 @@ export function SettingsModal({
             </div>
           )}
         </div>
+
+        {/* Footer Link to Privacy & Terms */}
+        <footer className="settings-modal-footer-strip">
+          <button
+            type="button"
+            className="btn-privacy-strip-link"
+            onClick={() => {
+              onClose()
+              if (onOpenPrivacy) onOpenPrivacy()
+            }}
+          >
+            <ShieldCheck size={15} />
+            <span>Consultar Política de Privacidade, Termos de Uso & Direitos LGPD</span>
+          </button>
+        </footer>
       </div>
     </div>
   )
