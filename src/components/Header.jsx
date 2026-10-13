@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Bell,
   CircleHelp,
@@ -30,6 +30,40 @@ export function Header({
   onSignOut
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  // 1. Fechar o menu automaticamente ao mudar de aba ou navegar
+  useEffect(() => {
+    setUserMenuOpen(false)
+  }, [activeTab])
+
+  // 2. Fechar o menu ao clicar/tocar fora ou ao pressionar Escape
+  useEffect(() => {
+    if (!userMenuOpen) return
+
+    const handlePointerDown = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setUserMenuOpen(false)
+      }
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setUserMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('touchstart', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('touchstart', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [userMenuOpen])
+
   const initial = (userName?.trim() || email || 'U').charAt(0).toUpperCase()
   const shortName = userName?.trim() ? userName.trim().split(' ')[0] : email
 
@@ -37,7 +71,13 @@ export function Header({
     <header className="app-topbar">
       <div className="topbar-container">
         {/* Brand */}
-        <div className="topbar-brand" onClick={() => onTabChange('dashboard')}>
+        <div
+          className="topbar-brand"
+          onClick={() => {
+            setUserMenuOpen(false)
+            onTabChange('dashboard')
+          }}
+        >
           <Logo />
         </div>
 
@@ -46,7 +86,10 @@ export function Header({
           <button
             type="button"
             className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => onTabChange('dashboard')}
+            onClick={() => {
+              setUserMenuOpen(false)
+              onTabChange('dashboard')
+            }}
           >
             <LayoutDashboard size={16} />
             <span>Visão Geral</span>
@@ -54,7 +97,10 @@ export function Header({
           <button
             type="button"
             className={`nav-link ${activeTab === 'transactions' ? 'active' : ''}`}
-            onClick={() => onTabChange('transactions')}
+            onClick={() => {
+              setUserMenuOpen(false)
+              onTabChange('transactions')
+            }}
           >
             <ReceiptText size={16} />
             <span>Extrato</span>
@@ -62,7 +108,10 @@ export function Header({
           <button
             type="button"
             className={`nav-link ${activeTab === 'planning' ? 'active' : ''}`}
-            onClick={() => onTabChange('planning')}
+            onClick={() => {
+              setUserMenuOpen(false)
+              onTabChange('planning')
+            }}
           >
             <Target size={16} />
             <span>Planejamento</span>
@@ -70,7 +119,10 @@ export function Header({
           <button
             type="button"
             className={`nav-link ${activeTab === 'guide' ? 'active' : ''}`}
-            onClick={() => onTabChange('guide')}
+            onClick={() => {
+              setUserMenuOpen(false)
+              onTabChange('guide')
+            }}
           >
             <CircleHelp size={16} />
             <span>Ajuda</span>
@@ -111,23 +163,26 @@ export function Header({
           </button>
 
           {/* User Profile */}
-          <div className="user-profile-menu">
+          <div className="user-profile-menu" ref={menuRef}>
             <button
               type="button"
               className="user-avatar-btn"
-              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              onClick={() => setUserMenuOpen((prev) => !prev)}
               title={userName?.trim() ? `${userName} (${email})` : email}
               aria-label="Perfil do usuário"
               aria-expanded={userMenuOpen}
+              aria-haspopup="menu"
             >
               <span className="user-avatar">{initial}</span>
               <span className="user-email-text">{shortName}</span>
             </button>
 
             {userMenuOpen && (
-              <>
-                <div className="menu-backdrop" onClick={() => setUserMenuOpen(false)} />
-                <div className="user-dropdown-card">
+              <div
+                className="user-dropdown-card"
+                role="menu"
+                aria-label="Opções do perfil"
+              >
                   <div
                     className="user-dropdown-header clickable-dropdown-header"
                     onClick={() => {
@@ -215,7 +270,6 @@ export function Header({
                     <span>Encerrar Sessão</span>
                   </button>
                 </div>
-              </>
             )}
           </div>
         </div>
