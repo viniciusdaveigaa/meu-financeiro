@@ -84,38 +84,50 @@ export function PrivacyTermsModal({ userId = '', onClose }) {
         </header>
 
         {/* Navegação entre Abas */}
-        <div className="privacy-nav-tabs">
+        <div className="privacy-nav-tabs" role="tablist" aria-label="Abas de privacidade e termos">
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'privacy'}
             className={`privacy-tab-btn ${activeTab === 'privacy' ? 'active' : ''}`}
             onClick={() => setActiveTab('privacy')}
           >
-            <Lock size={14} />
-            <span>Política de Privacidade</span>
+            <Lock size={15} />
+            <span className="privacy-tab-label-full">Política de Privacidade</span>
+            <span className="privacy-tab-label-short">Privacidade</span>
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'terms'}
             className={`privacy-tab-btn ${activeTab === 'terms' ? 'active' : ''}`}
             onClick={() => setActiveTab('terms')}
           >
-            <Scale size={14} />
-            <span>Termos de Uso</span>
+            <Scale size={15} />
+            <span className="privacy-tab-label-full">Termos de Uso</span>
+            <span className="privacy-tab-label-short">Termos de Uso</span>
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'my_data'}
             className={`privacy-tab-btn ${activeTab === 'my_data' ? 'active' : ''}`}
             onClick={() => setActiveTab('my_data')}
           >
-            <Database size={14} />
-            <span>Meus Dados & Direitos</span>
+            <Database size={15} />
+            <span className="privacy-tab-label-full">Meus Dados & Direitos</span>
+            <span className="privacy-tab-label-short">Dados & Direitos</span>
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'history'}
             className={`privacy-tab-btn ${activeTab === 'history' ? 'active' : ''}`}
             onClick={() => setActiveTab('history')}
           >
-            <History size={14} />
-            <span>Histórico de Versões</span>
+            <History size={15} />
+            <span className="privacy-tab-label-full">Histórico de Versões</span>
+            <span className="privacy-tab-label-short">Histórico</span>
           </button>
         </div>
 
