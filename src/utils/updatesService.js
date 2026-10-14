@@ -97,7 +97,7 @@ export const INITIAL_UPDATES_SEED = [
   {
     id: 'seed-upd-7',
     title: 'Otimização de Navegação e Performance (0ms)',
-    description: 'Implementação de cache em memória para abertura instantânea das abas de Extrato, Metas e Configurações, além de uma animação suave e acolhedora durante o encerramento de sessão.',
+    description: 'Implementação de cache em memória para abertura instantânea das abas de Extrato, Contas e Configurações, além de uma animação suave e acolhedora durante o encerramento de sessão.',
     category: 'improvement',
     version: '2.0.5',
     published_at: '2026-10-12T18:00:00Z',

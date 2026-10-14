@@ -753,7 +753,7 @@ function MainDashboard({ session, onSignOut }) {
                 </span>
                 <h1 className="hero-heading">
                   {activeTab === 'planning' ? (
-                    'Metas, Caixinhas e Orçamentos'
+                    'Contas, Caixinhas e Orçamentos'
                   ) : activeTab === 'transactions' ? (
                     'Extrato de Transações'
                   ) : (

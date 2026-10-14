@@ -1,9 +1,9 @@
 import {
   CircleHelp,
+  CreditCard,
   LayoutDashboard,
   Plus,
-  ReceiptText,
-  Target
+  ReceiptText
 } from 'lucide-react'
 
 export function MobileNav({
@@ -50,16 +50,16 @@ export function MobileNav({
         </button>
       </div>
 
-      {/* 4. Metas / Planejamento */}
+      {/* 4. Contas / Planejamento */}
       <button
         type="button"
         className={`mobile-nav-tab ${activeTab === 'planning' ? 'active' : ''}`}
         onClick={() => onTabChange('planning')}
       >
         <span className="nav-tab-icon">
-          <Target size={21} strokeWidth={activeTab === 'planning' ? 2.3 : 1.8} />
+          <CreditCard size={21} strokeWidth={activeTab === 'planning' ? 2.3 : 1.8} />
         </span>
-        <span className="nav-tab-label">Metas</span>
+        <span className="nav-tab-label">Contas</span>
       </button>
 
       {/* 5. Central de Ajuda */}
