@@ -44,6 +44,7 @@ export function TransactionList({
   loading,
   onEdit,
   onRemove,
+  onRemoveAllMonth,
   onAddNew,
   compact = false,
   limit = 6,
@@ -60,6 +61,31 @@ export function TransactionList({
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [csvModalOpen, setCsvModalOpen] = useState(false)
+  const [deletingMonth, setDeletingMonth] = useState(false)
+
+  const handleDeleteAllMonth = async () => {
+    if (!entries || entries.length === 0 || deletingMonth) return
+    const monthLabel = formatMonthName(month)
+    const confirmed = await dialog.confirm(
+      `Deseja realmente excluir todos os ${entries.length} lançamentos de ${monthLabel}? Esta ação apagará permanentemente todas as movimentações deste mês e não poderá ser desfeita.`,
+      {
+        title: `Excluir todos os lançamentos de ${monthLabel}?`,
+        confirmLabel: 'Sim, excluir tudo',
+        cancelLabel: 'Cancelar',
+        danger: true
+      }
+    )
+    if (!confirmed) return
+
+    try {
+      setDeletingMonth(true)
+      if (onRemoveAllMonth) {
+        await onRemoveAllMonth()
+      }
+    } finally {
+      setDeletingMonth(false)
+    }
+  }
 
   const accountMap = useMemo(() => Object.fromEntries((accounts || []).map((account) => [account.id, account])), [accounts])
 
@@ -321,6 +347,21 @@ export function TransactionList({
               Ver mais {filtered.length - limit} lançamentos <ArrowRight size={15} />
             </button>
           )}
+        </div>
+      )}
+
+      {!compact && entries.length > 0 && (
+        <div className="tx-footer-actions">
+          <button
+            type="button"
+            className="btn-delete-month"
+            onClick={handleDeleteAllMonth}
+            disabled={deletingMonth}
+            title={`Excluir permanentemente todos os ${entries.length} lançamentos deste mês`}
+          >
+            <Trash2 size={15} />
+            <span>{deletingMonth ? 'Excluindo lançamentos...' : `Excluir todos os lançamentos do mês (${entries.length})`}</span>
+          </button>
         </div>
       )}
 

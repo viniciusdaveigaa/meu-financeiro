@@ -642,6 +642,31 @@ function MainDashboard({ session, onSignOut }) {
     loadData()
   }
 
+  // Excluir todos os lançamentos do mês
+  const removeAllMonthTransactions = async () => {
+    if (!session?.user?.id || !entries.length) return
+    const range = getMonthRange(month)
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .gte('date', range.from)
+        .lte('date', range.to)
+
+      if (error) {
+        await dialog.alert(error.message, { title: 'Erro ao excluir lançamentos' })
+        return
+      }
+
+      setModal(null)
+      window.dispatchEvent(new Event('finance-data-changed'))
+      await loadData()
+    } catch (err) {
+      console.error('Erro ao excluir lançamentos do mês:', err)
+      await dialog.alert('Ocorreu um erro ao excluir os lançamentos.', { title: 'Erro' })
+    }
+  }
+
   // Save budgets handler
   const saveBudgets = async (draft) => {
     const rows = Object.entries(draft)
@@ -818,6 +843,7 @@ function MainDashboard({ session, onSignOut }) {
                     loading={loading}
                     onEdit={setModal}
                     onRemove={removeTransaction}
+                    onRemoveAllMonth={removeAllMonthTransactions}
                     onAddNew={() => setModal({})}
                     compact={true}
                     limit={6}
@@ -837,6 +863,7 @@ function MainDashboard({ session, onSignOut }) {
                   loading={loading}
                   onEdit={setModal}
                   onRemove={removeTransaction}
+                  onRemoveAllMonth={removeAllMonthTransactions}
                   onAddNew={() => setModal({})}
                   compact={false}
                   month={month}
