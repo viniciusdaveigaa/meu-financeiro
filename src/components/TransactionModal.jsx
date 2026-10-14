@@ -11,6 +11,7 @@ import {
   Minus,
   Plus,
   Repeat,
+  Tag,
   Trash2,
   X
 } from 'lucide-react'
@@ -409,44 +410,67 @@ export function TransactionModal({
                       value={newCatName}
                       onChange={(e) => setNewCatName(e.target.value)}
                       maxLength={30}
+                      autoFocus
                     />
                     <div className="quick-cat-pickers">
-                      <div className="quick-icons-row">
-                        {['Tag', 'PawPrint', 'ShoppingBag', 'Dumbbell', 'Coffee', 'Gift', 'Plane', 'Sparkles'].map((iconKey) => {
-                          const IconComp = iconCatalog[iconKey]?.icon
-                          return (
+                      <div>
+                        <span className="quick-picker-label">Escolha o ícone ({Object.keys(iconCatalog).length} disponíveis):</span>
+                        <div className="quick-icons-row">
+                          {Object.entries(iconCatalog).map(([iconKey, item]) => {
+                            const IconComp = item.icon
+                            return (
+                              <button
+                                type="button"
+                                key={iconKey}
+                                className={`mini-icon-btn ${newCatIcon === iconKey ? 'active' : ''}`}
+                                onClick={() => setNewCatIcon(iconKey)}
+                                title={item.label}
+                              >
+                                <IconComp size={15} />
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="quick-picker-label">Escolha a cor:</span>
+                        <div className="quick-colors-row">
+                          {colorPalette.map((c) => (
                             <button
                               type="button"
-                              key={iconKey}
-                              className={`mini-icon-btn ${newCatIcon === iconKey ? 'active' : ''}`}
-                              onClick={() => setNewCatIcon(iconKey)}
+                              key={c.color}
+                              className={`mini-color-btn ${newCatColor.color === c.color ? 'active' : ''}`}
+                              style={{ backgroundColor: c.color }}
+                              onClick={() => setNewCatColor(c)}
+                              title={c.name}
                             >
-                              <IconComp size={15} />
+                              {newCatColor.color === c.color && <Check size={10} color="#fff" />}
                             </button>
-                          )
-                        })}
+                          ))}
+                        </div>
                       </div>
-                      <div className="quick-colors-row">
-                        {colorPalette.slice(0, 6).map((c) => (
-                          <button
-                            type="button"
-                            key={c.color}
-                            className={`mini-color-btn ${newCatColor.color === c.color ? 'active' : ''}`}
-                            style={{ backgroundColor: c.color }}
-                            onClick={() => setNewCatColor(c)}
-                          >
-                            {newCatColor.color === c.color && <Check size={10} color="#fff" />}
-                          </button>
-                        ))}
+
+                      <div className="quick-cat-preview">
+                        <span
+                          className="quick-cat-preview-badge"
+                          style={{ color: newCatColor.color, backgroundColor: newCatColor.bg }}
+                        >
+                          {(() => {
+                            const PreviewIcon = iconCatalog[newCatIcon]?.icon || Tag
+                            return <PreviewIcon size={14} />
+                          })()}
+                          <span>{newCatName.trim() || 'Nova Categoria'}</span>
+                        </span>
                       </div>
                     </div>
                     <button
                       type="button"
-                      className="btn btn-secondary btn-xs"
+                      className="btn btn-primary btn-xs"
                       onClick={handleQuickAddCat}
                       disabled={!newCatName.trim()}
                     >
-                      Adicionar e Selecionar
+                      <Plus size={13} /> Criar e Selecionar
                     </button>
                   </div>
                 )}

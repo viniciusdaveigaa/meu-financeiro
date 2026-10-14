@@ -2883,10 +2883,21 @@ body.theme-dark .bank-logo-badge.has-logo-img,
   gap: 8px;
 }
 
+.quick-picker-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+
 .quick-icons-row {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
+  max-height: 110px;
+  overflow-y: auto;
+  padding: 2px;
 }
 
 .mini-icon-btn {
@@ -2901,6 +2912,13 @@ body.theme-dark .bank-logo-badge.has-logo-img,
   justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.mini-icon-btn:hover:not(.active) {
+  background: #f1f5f9;
+  color: var(--text-main);
+  border-color: #94a3b8;
 }
 
 .mini-icon-btn.active {
@@ -2913,11 +2931,12 @@ body.theme-dark .bank-logo-badge.has-logo-img,
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  padding: 2px;
 }
 
 .mini-color-btn {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 2px solid #fff;
   box-shadow: 0 0 0 1px var(--border-light);
@@ -2931,6 +2950,26 @@ body.theme-dark .bank-logo-badge.has-logo-img,
 .mini-color-btn.active {
   transform: scale(1.15);
   box-shadow: 0 0 0 2px var(--emerald-800);
+}
+
+.quick-cat-preview {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.quick-cat-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .category-grid {
