@@ -40,7 +40,7 @@ export function CsvImportModal({ accounts = [], entries = [], onClose, onImportS
   const [bankSearch, setBankSearch] = useState('')
   const [autoDetect, setAutoDetect] = useState(true)
 
-  const [file, setFile] = useState(null)
+  const [files, setFiles] = useState([])
   const [parsedData, setParsedData] = useState(null)
   const [selectedAccountId, setSelectedAccountId] = useState('')
   const [ignoreDuplicates, setIgnoreDuplicates] = useState(true)
@@ -77,44 +77,98 @@ export function CsvImportModal({ accounts = [], entries = [], onClose, onImportS
   }
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files?.[0]
-    if (selectedFile) processFile(selectedFile)
+    const selectedFiles = Array.from(e.target.files || [])
+    if (selectedFiles.length > 0) processFiles(selectedFiles)
+    if (e.target) e.target.value = ''
   }
 
-  const processFile = (selectedFile) => {
-    if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
-      return dialog.alert('Selecione um arquivo com formato .csv.', {
+  const processFiles = async (selectedFiles) => {
+    const fileArray = Array.from(selectedFiles || [])
+    const validCsvFiles = fileArray.filter((f) => f.name.toLowerCase().endsWith('.csv'))
+
+    if (validCsvFiles.length === 0) {
+      return dialog.alert('Selecione arquivos com formato .csv.', {
         title: 'Formato inválido'
       })
     }
 
-    setFile(selectedFile)
-    const reader = new FileReader()
+    setLoading(true)
+    setFiles(validCsvFiles)
 
-    reader.onload = (event) => {
-      const text = event.target.result
-      let activeBankId = selectedBankId
+    try {
+      const readPromises = validCsvFiles.map((f) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = (event) => resolve({ file: f, text: event.target.result })
+          reader.onerror = () => reject(new Error(`Erro ao ler o arquivo ${f.name}`))
+          reader.readAsText(f, 'UTF-8')
+        })
+      })
 
-      // Identificação automática opcional por cabeçalho
-      if (autoDetect) {
-        const detected = autoDetectBankFromHeader(text.slice(0, 500))
-        if (detected && detected !== 'generic' && detected !== selectedBankId) {
-          activeBankId = detected
-          setSelectedBankId(detected)
+      const readResults = await Promise.all(readPromises)
+
+      let allValidRows = []
+      let allInvalidRows = []
+      let errors = []
+      let lastDetectedBank = selectedBankId
+
+      readResults.forEach(({ file: f, text }, fileIndex) => {
+        let activeBankId = selectedBankId
+
+        if (autoDetect) {
+          const detected = autoDetectBankFromHeader(text.slice(0, 500))
+          if (detected && detected !== 'generic') {
+            activeBankId = detected
+            lastDetectedBank = detected
+          }
         }
+
+        const parseResult = parseBankCsv(text, activeBankId)
+        if (!parseResult.success) {
+          errors.push(`${f.name}: ${parseResult.error}`)
+        } else {
+          // Garante IDs únicos e rastreabilidade do arquivo de origem
+          const rowsWithSource = parseResult.rows.map((row, rowIdx) => ({
+            ...row,
+            id: `csv_${fileIndex}_${rowIdx}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            sourceFile: f.name
+          }))
+          allValidRows.push(...rowsWithSource)
+          if (parseResult.invalidRows?.length) {
+            allInvalidRows.push(...parseResult.invalidRows.map((inv) => ({ ...inv, file: f.name })))
+          }
+        }
+      })
+
+      if (lastDetectedBank !== selectedBankId) {
+        setSelectedBankId(lastDetectedBank)
       }
 
-      const parseResult = parseBankCsv(text, activeBankId)
-      if (!parseResult.success) {
-        dialog.alert(parseResult.error, { title: 'Erro ao interpretar extrato' })
+      if (allValidRows.length === 0) {
+        setLoading(false)
+        setFiles([])
         setParsedData(null)
-        setFile(null)
-        return
+        return dialog.alert(
+          errors.length > 0
+            ? `Nenhum lançamento válido encontrado:\n${errors.join('\n')}`
+            : 'Nenhum lançamento válido foi identificado nos arquivos selecionados.',
+          { title: 'Erro ao interpretar extrato' }
+        )
       }
+
+      if (errors.length > 0 && errors.length < validCsvFiles.length) {
+        await dialog.alert(
+          `Alguns arquivos não puderam ser lidos, mas prosseguiremos com os demais:\n${errors.join('\n')}`,
+          { title: 'Aviso de importação' }
+        )
+      }
+
+      // Ordena lançamentos por data decrescente
+      allValidRows.sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0))
 
       // Detecção de duplicatas com o histórico atual
       const { rows: markedRows, duplicateCount } = markDuplicateTransactions(
-        parseResult.rows,
+        allValidRows,
         entries
       )
 
@@ -125,16 +179,29 @@ export function CsvImportModal({ accounts = [], entries = [], onClose, onImportS
           .map((r) => r.id)
       )
 
+      const totalIncome = markedRows.filter((r) => r.type === 'income').reduce((s, r) => s + r.amount, 0)
+      const totalExpense = markedRows.filter((r) => r.type === 'expense').reduce((s, r) => s + r.amount, 0)
+
       setParsedData({
-        ...parseResult,
+        success: true,
+        bankId: lastDetectedBank,
         rows: markedRows,
+        invalidRows: allInvalidRows,
+        totalCount: markedRows.length,
+        totalIncome,
+        totalExpense,
         duplicateCount
       })
       setSelectedRowIds(initialSelected)
       setStep('preview')
+    } catch (err) {
+      console.error('Erro ao ler múltiplos arquivos:', err)
+      dialog.alert('Ocorreu um erro ao carregar os arquivos CSV.', { title: 'Erro de leitura' })
+      setFiles([])
+      setParsedData(null)
+    } finally {
+      setLoading(false)
     }
-
-    reader.readAsText(selectedFile, 'UTF-8')
   }
 
   const handleToggleIgnoreDuplicates = (checked) => {
@@ -185,8 +252,8 @@ export function CsvImportModal({ accounts = [], entries = [], onClose, onImportS
   const handleDrop = (e) => {
     e.preventDefault()
     setIsDragging(false)
-    const droppedFile = e.dataTransfer.files?.[0]
-    if (droppedFile) processFile(droppedFile)
+    const droppedFiles = Array.from(e.dataTransfer.files || [])
+    if (droppedFiles.length > 0) processFiles(droppedFiles)
   }
 
   const handleConfirmImport = async () => {
@@ -390,16 +457,21 @@ export function CsvImportModal({ accounts = [], entries = [], onClose, onImportS
                   ref={fileInputRef}
                   type="file"
                   accept=".csv"
+                  multiple
                   style={{ display: 'none' }}
                   onChange={handleFileChange}
                 />
                 <span className="dropzone-icon">
                   <Upload size={34} />
                 </span>
-                <h4>Arraste o arquivo CSV do {currentBankConfig.name} aqui</h4>
-                <p>Ou clique para selecionar um arquivo do seu computador ou celular.</p>
+                <h4>
+                  {currentBankConfig.id === 'generic'
+                    ? 'Arraste os arquivos CSV aqui'
+                    : `Arraste os arquivos CSV do ${currentBankConfig.name} aqui`}
+                </h4>
+                <p>Ou clique para selecionar um ou mais arquivos do seu computador ou celular.</p>
                 <div className="dropzone-tips">
-                  <span>Formato suportado: Arquivos delimitados .CSV em UTF-8</span>
+                  <span>Formato suportado: Múltiplos arquivos .CSV em UTF-8</span>
                 </div>
               </div>
 
@@ -421,24 +493,39 @@ export function CsvImportModal({ accounts = [], entries = [], onClose, onImportS
                 <div className="file-info-col">
                   <div className="file-name-row">
                     <BankLogoBadge logoId={currentBankConfig.logoId} size={24} />
-                    <strong>{file?.name}</strong>
+                    <strong>
+                      {files.length === 1
+                        ? files[0]?.name
+                        : `${files.length} arquivos selecionados`}
+                    </strong>
                     <span className="badge-badge badge-neutral">{currentBankConfig.name}</span>
                   </div>
                   <small>
                     {parsedData.totalCount} transações identificadas com sucesso
+                    {files.length > 1 && ` em ${files.length} arquivos`}
                   </small>
+                  {files.length > 1 && (
+                    <div className="selected-files-pills">
+                      {files.map((f, idx) => (
+                        <span key={idx} className="file-pill" title={f.name}>
+                          <FileSpreadsheet size={12} />
+                          <span>{f.name}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"
                   className="btn btn-ghost btn-xs"
                   onClick={() => {
                     setParsedData(null)
-                    setFile(null)
+                    setFiles([])
                     setStep('upload')
                   }}
                   disabled={loading}
                 >
-                  Trocar arquivo
+                  Trocar {files.length > 1 ? 'arquivos' : 'arquivo'}
                 </button>
               </div>
 
@@ -510,6 +597,7 @@ export function CsvImportModal({ accounts = [], entries = [], onClose, onImportS
                       </th>
                       <th>Data</th>
                       <th>Descrição</th>
+                      {files.length > 1 && <th>Origem</th>}
                       <th>Categoria</th>
                       <th>Tipo</th>
                       <th style={{ textAlign: 'right' }}>Valor</th>
@@ -535,6 +623,13 @@ export function CsvImportModal({ accounts = [], entries = [], onClose, onImportS
                           <td className="cell-desc" title={row.rawDescription || row.description}>
                             <strong>{row.description}</strong>
                           </td>
+                          {files.length > 1 && (
+                            <td className="cell-file">
+                              <span className="file-badge" title={row.sourceFile}>
+                                {row.sourceFile}
+                              </span>
+                            </td>
+                          )}
                           <td className="cell-cat">
                             <span className="cat-pill">
                               <CategoryIcon category={row.category} size={13} />
@@ -587,6 +682,7 @@ export function CsvImportModal({ accounts = [], entries = [], onClose, onImportS
                     <ul className="invalid-list">
                       {parsedData.invalidRows.map((inv, idx) => (
                         <li key={idx}>
+                          {inv.file && <span className="text-muted">[{inv.file}] </span>}
                           <strong>Linha {inv.line}:</strong> {inv.reason}
                         </li>
                       ))}

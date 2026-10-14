@@ -6959,6 +6959,52 @@ body.theme-dark .bank-logo-badge.has-logo-img,
   font-weight: 600;
 }
 
+.selected-files-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.file-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  border: 1px solid var(--border-light, #cbd5e1);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 11px;
+  color: var(--text-muted, #475569);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-file {
+  font-size: 11px;
+  color: var(--text-muted, #64748b);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-badge {
+  display: inline-block;
+  background: var(--bg-hover, #f1f5f9);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10.5px;
+  color: var(--text-muted, #475569);
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 .import-kpis-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
