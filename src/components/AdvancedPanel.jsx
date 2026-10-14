@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
+  Calendar,
   Check,
   CreditCard,
   Info,
@@ -476,97 +477,156 @@ export function AdvancedPanel({
 
               if (isEditing) {
                 return (
-                  <form key={acc.id} onSubmit={updateAccount} className="account-edit-row">
-                    <input
-                      type="text"
-                      required
-                      value={editingAccount.name}
-                      onChange={(e) => setEditingAccount({ ...editingAccount, name: e.target.value })}
-                      placeholder="Nome da conta"
-                      disabled={savingEdit}
-                      autoFocus
-                    />
-                    <select
-                      value={editingAccount.kind}
-                      onChange={(e) => setEditingAccount({ ...editingAccount, kind: e.target.value })}
-                      disabled={savingEdit}
-                    >
-                      <option value="account">Conta</option>
-                      <option value="card">Cartão</option>
-                    </select>
-
-                    {editingAccount.kind === 'card' && (
-                      <select
-                        value={editingAccount.card_type || 'credit'}
-                        onChange={(e) => setEditingAccount({ ...editingAccount, card_type: e.target.value })}
-                        disabled={savingEdit}
-                        title="Tipo do cartão"
-                      >
-                        <option value="credit">Crédito</option>
-                        <option value="debit">Débito</option>
-                      </select>
-                    )}
-
-                    {editingAccount.kind === 'card' && editingAccount.card_type !== 'debit' && (
-                      <>
-                        <input
-                          type="number"
-                          min="1"
-                          max="31"
-                          placeholder="Dia fecha *"
-                          title="Dia de fechamento da fatura (1 a 31)"
-                          style={{ width: '85px' }}
-                          value={editingAccount.closing_day || ''}
-                          onChange={(e) => setEditingAccount({ ...editingAccount, closing_day: e.target.value })}
-                          disabled={savingEdit}
-                          required
+                  <form
+                    key={acc.id}
+                    onSubmit={updateAccount}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') setEditingAccount(null)
+                    }}
+                    className="account-edit-box account-edit-row"
+                  >
+                    <div className="account-form-header">
+                      <div className="account-form-title-group">
+                        <BankLogoBadge
+                          logoId={editingAccount.logo || resolveBankLogo('', editingAccount.name, editingAccount.kind).id}
+                          accountName={editingAccount.name}
+                          kind={editingAccount.kind}
+                          size={36}
                         />
-                        <input
-                          type="number"
-                          min="1"
-                          max="31"
-                          placeholder="Dia vence *"
-                          title="Dia de vencimento da fatura (1 a 31)"
-                          style={{ width: '85px' }}
-                          value={editingAccount.due_day || ''}
-                          onChange={(e) => setEditingAccount({ ...editingAccount, due_day: e.target.value })}
-                          disabled={savingEdit}
-                          required
-                        />
-                      </>
-                    )}
+                        <div>
+                          <h5 className="account-form-title">
+                            Editar {editingAccount.kind === 'card' ? 'Cartão' : 'Conta'}
+                          </h5>
+                          <span className="account-form-subtitle">
+                            Atualize as informações, modalidade e datas da fatura
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-                    <select
-                      value={editingAccount.logo || ''}
-                      onChange={(e) => setEditingAccount({ ...editingAccount, logo: e.target.value })}
-                      disabled={savingEdit}
-                      className="account-logo-select"
-                      title="Escolha o logotipo da instituição"
-                    >
-                      <option value="">Logo: Automático</option>
-                      {BANK_LOGOS.map((bank) => (
-                        <option key={bank.id} value={bank.id}>
-                          {bank.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="acc-actions-group">
-                      <button
-                        type="submit"
-                        className="btn btn-primary btn-xs"
-                        disabled={savingEdit || !editingAccount.name.trim()}
-                        title="Salvar alterações"
-                      >
-                        <Check size={14} />
-                      </button>
+                    <div className="account-form-grid">
+                      <label className="account-form-field col-span-2">
+                        <span className="field-label">Nome da Conta ou Cartão *</span>
+                        <input
+                          type="text"
+                          required
+                          value={editingAccount.name}
+                          onChange={(e) => setEditingAccount({ ...editingAccount, name: e.target.value })}
+                          placeholder="Ex: Nubank, Itaú, Carteira..."
+                          disabled={savingEdit}
+                          autoFocus
+                        />
+                        <span className="field-hint">Identificação principal desta conta no sistema</span>
+                      </label>
+
+                      <label className="account-form-field">
+                        <span className="field-label">Tipo</span>
+                        <select
+                          value={editingAccount.kind}
+                          onChange={(e) => setEditingAccount({ ...editingAccount, kind: e.target.value })}
+                          disabled={savingEdit}
+                        >
+                          <option value="account">Conta Corrente / Dinheiro</option>
+                          <option value="card">Cartão</option>
+                        </select>
+                      </label>
+
+                      {editingAccount.kind === 'card' ? (
+                        <label className="account-form-field">
+                          <span className="field-label">Função do Cartão</span>
+                          <select
+                            value={editingAccount.card_type || 'credit'}
+                            onChange={(e) => setEditingAccount({ ...editingAccount, card_type: e.target.value })}
+                            disabled={savingEdit}
+                            title="Função do cartão"
+                          >
+                            <option value="credit">Cartão de Crédito</option>
+                            <option value="debit">Cartão de Débito</option>
+                          </select>
+                        </label>
+                      ) : null}
+
+                      {editingAccount.kind === 'card' && editingAccount.card_type !== 'debit' && (
+                        <div className="account-card-dates-box col-span-2">
+                          <div className="card-dates-header">
+                            <Calendar size={13} />
+                            <span>Configuração da Fatura Mensal (Obrigatório)</span>
+                          </div>
+                          <div className="card-dates-grid">
+                            <label className="account-form-field">
+                              <span className="field-label">Dia Fechamento *</span>
+                              <input
+                                type="number"
+                                min="1"
+                                max="31"
+                                placeholder="Ex: 3"
+                                title="Dia de fechamento da fatura (1 a 31)"
+                                value={editingAccount.closing_day || ''}
+                                onChange={(e) => setEditingAccount({ ...editingAccount, closing_day: e.target.value })}
+                                disabled={savingEdit}
+                                required
+                              />
+                              <span className="field-hint">Dia em que a fatura fecha (1 a 31)</span>
+                            </label>
+                            <label className="account-form-field">
+                              <span className="field-label">Dia Vencimento *</span>
+                              <input
+                                type="number"
+                                min="1"
+                                max="31"
+                                placeholder="Ex: 10"
+                                title="Dia de vencimento da fatura (1 a 31)"
+                                value={editingAccount.due_day || ''}
+                                onChange={(e) => setEditingAccount({ ...editingAccount, due_day: e.target.value })}
+                                disabled={savingEdit}
+                                required
+                              />
+                              <span className="field-hint">Dia do pagamento da fatura (1 a 31)</span>
+                            </label>
+                          </div>
+                          {(!editingAccount.closing_day || !editingAccount.due_day) && (
+                            <div className="card-date-warning-hint">
+                              <AlertTriangle size={13} />
+                              <span>Informe os dias de fechamento e vencimento (1 a 31) para este cartão.</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <label className="account-form-field col-span-2">
+                        <span className="field-label">Banco / Instituição (Logotipo)</span>
+                        <select
+                          value={editingAccount.logo || ''}
+                          onChange={(e) => setEditingAccount({ ...editingAccount, logo: e.target.value })}
+                          disabled={savingEdit}
+                          className="account-logo-select"
+                        >
+                          <option value="">Identificação automática pelo nome</option>
+                          {BANK_LOGOS.map((bank) => (
+                            <option key={bank.id} value={bank.id}>
+                              {bank.name}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="field-hint">Selecione o banco ou deixe no automático para identificar pelo nome digitado</span>
+                      </label>
+                    </div>
+
+                    <div className="account-form-footer">
                       <button
                         type="button"
-                        className="btn btn-secondary btn-xs"
+                        className="btn btn-secondary btn-sm"
                         onClick={() => setEditingAccount(null)}
                         disabled={savingEdit}
-                        title="Cancelar"
                       >
-                        <X size={14} />
+                        <X size={14} /> Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary btn-sm"
+                        disabled={savingEdit || !editingAccount.name.trim()}
+                      >
+                        <Check size={14} /> {savingEdit ? 'Salvando...' : 'Salvar alterações'}
                       </button>
                     </div>
                   </form>
@@ -644,89 +704,140 @@ export function AdvancedPanel({
             )}
           </div>
 
-          <form onSubmit={addAccount} className="inline-add-form">
-            <input
-              type="text"
-              required
-              placeholder="Nome (ex: Cartão Principal, Banco Digital)"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={addingAccount}
-            />
-            <select
-              value={kind}
-              onChange={(e) => setKind(e.target.value)}
-              disabled={addingAccount}
-            >
-              <option value="account">Conta</option>
-              <option value="card">Cartão</option>
-            </select>
-            {kind === 'card' && (
-              <select
-                value={cardType}
-                onChange={(e) => setCardType(e.target.value)}
-                disabled={addingAccount}
-                title="Tipo do cartão"
-              >
-                <option value="credit">Crédito</option>
-                <option value="debit">Débito</option>
-              </select>
-            )}
-            {kind === 'card' && cardType === 'credit' && (
-              <>
-                <input
-                  type="number"
-                  min="1"
-                  max="31"
-                  placeholder="Dia fecha *"
-                  title="Dia de fechamento da fatura (1 a 31)"
-                  style={{ width: '90px' }}
-                  value={closingDay}
-                  onChange={(e) => setClosingDay(e.target.value)}
-                  disabled={addingAccount}
-                  required
+          <form onSubmit={addAccount} className="account-add-box inline-add-form">
+            <div className="account-form-header">
+              <div className="account-form-title-group">
+                <BankLogoBadge
+                  logoId={logo || resolveBankLogo('', name, kind).id}
+                  accountName={name}
+                  kind={kind}
+                  size={36}
                 />
+                <div>
+                  <h5 className="account-form-title">Cadastrar Nova Conta ou Cartão</h5>
+                  <span className="account-form-subtitle">
+                    Adicione bancos, carteiras ou cartões de crédito para registrar suas movimentações
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="account-form-grid">
+              <label className="account-form-field col-span-2">
+                <span className="field-label">Nome da Conta ou Cartão *</span>
                 <input
-                  type="number"
-                  min="1"
-                  max="31"
-                  placeholder="Dia vence *"
-                  title="Dia de vencimento da fatura (1 a 31)"
-                  style={{ width: '90px' }}
-                  value={dueDay}
-                  onChange={(e) => setDueDay(e.target.value)}
-                  disabled={addingAccount}
+                  type="text"
                   required
+                  placeholder="Ex: Nubank, Inter, Itaú, Carteira Física..."
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={addingAccount}
                 />
-                {(!closingDay || !dueDay) && (
-                  <div className="card-date-warning-hint">
-                    <AlertTriangle size={13} />
-                    <span>Informe os dias de fechamento e vencimento (1 a 31) para cadastrar o cartão.</span>
+                <span className="field-hint">Identificação principal desta conta no sistema</span>
+              </label>
+
+              <label className="account-form-field">
+                <span className="field-label">Tipo</span>
+                <select
+                  value={kind}
+                  onChange={(e) => setKind(e.target.value)}
+                  disabled={addingAccount}
+                >
+                  <option value="account">Conta Corrente / Dinheiro</option>
+                  <option value="card">Cartão</option>
+                </select>
+              </label>
+
+              {kind === 'card' ? (
+                <label className="account-form-field">
+                  <span className="field-label">Função do Cartão</span>
+                  <select
+                    value={cardType}
+                    onChange={(e) => setCardType(e.target.value)}
+                    disabled={addingAccount}
+                    title="Função do cartão"
+                  >
+                    <option value="credit">Cartão de Crédito</option>
+                    <option value="debit">Cartão de Débito</option>
+                  </select>
+                </label>
+              ) : null}
+
+              {kind === 'card' && cardType === 'credit' && (
+                <div className="account-card-dates-box col-span-2">
+                  <div className="card-dates-header">
+                    <Calendar size={13} />
+                    <span>Configuração da Fatura Mensal (Obrigatório)</span>
                   </div>
-                )}
-              </>
-            )}
-            <select
-              value={logo}
-              onChange={(e) => setLogo(e.target.value)}
-              disabled={addingAccount}
-              className="account-logo-select"
-              title="Escolha o logotipo da instituição"
-            >
-              <option value="">Logo: Automático</option>
-              {BANK_LOGOS.map((bank) => (
-                <option key={bank.id} value={bank.id}>
-                  {bank.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              className="btn btn-secondary btn-sm"
-              disabled={addingAccount}
-            >
-              <Plus size={14} /> Adicionar
-            </button>
+                  <div className="card-dates-grid">
+                    <label className="account-form-field">
+                      <span className="field-label">Dia Fechamento *</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        placeholder="Ex: 3"
+                        title="Dia de fechamento da fatura (1 a 31)"
+                        value={closingDay}
+                        onChange={(e) => setClosingDay(e.target.value)}
+                        disabled={addingAccount}
+                        required
+                      />
+                      <span className="field-hint">Dia em que a fatura fecha (1 a 31)</span>
+                    </label>
+                    <label className="account-form-field">
+                      <span className="field-label">Dia Vencimento *</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        placeholder="Ex: 10"
+                        title="Dia de vencimento da fatura (1 a 31)"
+                        value={dueDay}
+                        onChange={(e) => setDueDay(e.target.value)}
+                        disabled={addingAccount}
+                        required
+                      />
+                      <span className="field-hint">Dia do pagamento da fatura (1 a 31)</span>
+                    </label>
+                  </div>
+                  {(!closingDay || !dueDay) && (
+                    <div className="card-date-warning-hint">
+                      <AlertTriangle size={13} />
+                      <span>Informe os dias de fechamento e vencimento (1 a 31) para cadastrar o cartão.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <label className="account-form-field col-span-2">
+                <span className="field-label">Instituição / Logotipo do Banco</span>
+                <select
+                  value={logo}
+                  onChange={(e) => setLogo(e.target.value)}
+                  disabled={addingAccount}
+                  className="account-logo-select"
+                >
+                  <option value="">Identificação automática pelo nome</option>
+                  {BANK_LOGOS.map((bank) => (
+                    <option key={bank.id} value={bank.id}>
+                      {bank.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="field-hint">Selecione o banco ou deixe no automático para identificar pelo nome digitado</span>
+              </label>
+            </div>
+
+            <div className="account-form-footer">
+              <button
+                type="submit"
+                className="btn btn-primary btn-sm"
+                disabled={addingAccount || !name.trim()}
+              >
+                <Plus size={15} /> {addingAccount ? 'Cadastrando...' : kind === 'card' ? 'Cadastrar Cartão' : 'Cadastrar Conta'}
+              </button>
+            </div>
           </form>
         </section>
 
