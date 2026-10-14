@@ -19,6 +19,7 @@ import {
   amountToInput,
   calculateInvoiceMonth,
   changeMonth,
+  dateInMonth,
   formatAmountInput,
   formatMoney,
   formatMonthName,
@@ -34,6 +35,7 @@ export function TransactionModal({
   entry,
   accounts,
   advancedReady,
+  month,
   onClose,
   onSave,
   onDelete
@@ -43,6 +45,14 @@ export function TransactionModal({
 
   const editing = Boolean(entry?.id)
   const today = localISODate()
+  const defaultInitialDate = (() => {
+    if (entry?.date) return entry.date
+    if (month && month !== today.slice(0, 7)) {
+      const todayDay = new Date().getDate()
+      return dateInMonth(month, todayDay)
+    }
+    return today
+  })()
   const yesterdayDate = new Date()
   yesterdayDate.setDate(yesterdayDate.getDate() - 1)
   const yesterday = localISODate(yesterdayDate)
@@ -51,15 +61,17 @@ export function TransactionModal({
     if (entry) {
       const existingAccount = accounts.find((a) => a.id === entry.account_id)
       const defaultMethod = entry.payment_method || (existingAccount?.kind === 'card' && existingAccount?.card_type !== 'debit' ? 'credit' : 'debit')
+      const isCredit = entry.type === 'expense' && existingAccount?.kind === 'card' && defaultMethod === 'credit'
+      const entryDate = entry.date || defaultInitialDate
       return {
         ...entry,
         account_id: entry.account_id || '',
         payment_method: defaultMethod,
-        invoice_month: entry.invoice_month || null,
+        invoice_month: isCredit ? (entry.invoice_month || null) : null,
         amount: amountToInput(entry.amount),
         installment: Number(entry.installment_total) > 1,
         installments: Number(entry.installment_total) > 1 ? Number(entry.installment_total) : 1,
-        start_month: entry.date ? entry.date.slice(0, 7) : today.slice(0, 7),
+        start_month: entryDate.slice(0, 7),
         recurring: false
       }
     }
@@ -68,13 +80,13 @@ export function TransactionModal({
       description: '',
       amount: '',
       category: categories[0] || 'Alimentacao',
-      date: today,
+      date: defaultInitialDate,
       account_id: '',
       payment_method: 'debit',
       invoice_month: null,
       installment: false,
       installments: 2,
-      start_month: today.slice(0, 7),
+      start_month: defaultInitialDate.slice(0, 7),
       recurring: false
     }
   })
@@ -189,7 +201,12 @@ export function TransactionModal({
                   role="radio"
                   aria-checked={draft.type === 'expense'}
                   className={`expense ${draft.type === 'expense' ? 'active' : ''}`}
-                  onClick={() => set({ type: 'expense' })}
+                  onClick={() => {
+                    const selAccount = accounts?.find((a) => a.id === draft.account_id)
+                    const isCredit = selAccount?.kind === 'card' && draft.payment_method === 'credit'
+                    const newInvMonth = isCredit ? calculateInvoiceMonth(draft.date, selAccount?.closing_day) : null
+                    set({ type: 'expense', invoice_month: newInvMonth })
+                  }}
                 >
                   <ArrowDownRight size={17} /> Saída
                 </button>
@@ -198,7 +215,7 @@ export function TransactionModal({
                   role="radio"
                   aria-checked={draft.type === 'income'}
                   className={`income ${draft.type === 'income' ? 'active' : ''}`}
-                  onClick={() => set({ type: 'income', installment: false, installments: 1 })}
+                  onClick={() => set({ type: 'income', installment: false, installments: 1, invoice_month: null, payment_method: 'debit' })}
                 >
                   <ArrowUpRight size={17} /> Entrada
                 </button>
@@ -246,10 +263,13 @@ export function TransactionModal({
                     onChange={(event) => {
                       const newDate = event.target.value
                       const selAccount = accounts?.find((a) => a.id === draft.account_id)
-                      const newInvMonth = selAccount?.kind === 'card' && draft.payment_method === 'credit'
-                        ? calculateInvoiceMonth(newDate, selAccount.closing_day)
-                        : draft.invoice_month
-                      set({ date: newDate, invoice_month: newInvMonth })
+                      const isCredit = draft.type === 'expense' && selAccount?.kind === 'card' && draft.payment_method === 'credit'
+                      const newInvMonth = isCredit ? calculateInvoiceMonth(newDate, selAccount?.closing_day) : null
+                      set({
+                        date: newDate,
+                        invoice_month: newInvMonth,
+                        start_month: newDate ? newDate.slice(0, 7) : draft.start_month
+                      })
                     }}
                     disabled={saving}
                     required
@@ -260,10 +280,9 @@ export function TransactionModal({
                       className={`chip ${draft.date === today ? 'active' : ''}`}
                       onClick={() => {
                         const selAccount = accounts?.find((a) => a.id === draft.account_id)
-                        const newInvMonth = selAccount?.kind === 'card' && draft.payment_method === 'credit'
-                          ? calculateInvoiceMonth(today, selAccount.closing_day)
-                          : draft.invoice_month
-                        set({ date: today, invoice_month: newInvMonth })
+                        const isCredit = draft.type === 'expense' && selAccount?.kind === 'card' && draft.payment_method === 'credit'
+                        const newInvMonth = isCredit ? calculateInvoiceMonth(today, selAccount?.closing_day) : null
+                        set({ date: today, invoice_month: newInvMonth, start_month: today.slice(0, 7) })
                       }}
                     >
                       Hoje
@@ -273,10 +292,9 @@ export function TransactionModal({
                       className={`chip ${draft.date === yesterday ? 'active' : ''}`}
                       onClick={() => {
                         const selAccount = accounts?.find((a) => a.id === draft.account_id)
-                        const newInvMonth = selAccount?.kind === 'card' && draft.payment_method === 'credit'
-                          ? calculateInvoiceMonth(yesterday, selAccount.closing_day)
-                          : draft.invoice_month
-                        set({ date: yesterday, invoice_month: newInvMonth })
+                        const isCredit = draft.type === 'expense' && selAccount?.kind === 'card' && draft.payment_method === 'credit'
+                        const newInvMonth = isCredit ? calculateInvoiceMonth(yesterday, selAccount?.closing_day) : null
+                        set({ date: yesterday, invoice_month: newInvMonth, start_month: yesterday.slice(0, 7) })
                       }}
                     >
                       Ontem
@@ -306,7 +324,7 @@ export function TransactionModal({
                         const newAccountId = event.target.value
                         const selAccount = accounts?.find((a) => a.id === newAccountId)
                         if (selAccount?.kind === 'card') {
-                          const isCredit = selAccount.card_type !== 'debit'
+                          const isCredit = draft.type === 'expense' && selAccount.card_type !== 'debit'
                           const newInvMonth = isCredit ? calculateInvoiceMonth(draft.date, selAccount.closing_day) : null
                           set({
                             account_id: newAccountId,

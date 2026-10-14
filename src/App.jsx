@@ -485,10 +485,13 @@ function MainDashboard({ session, onSignOut }) {
     }
     // 2. Existing simple edit
     else if (draft.id) {
+      if (isCreditPurchase && payload.invoice_month && payload.invoice_month !== payload.date.slice(0, 7)) {
+        payload.date = dateInMonth(payload.invoice_month, Number(draft.date.slice(-2)))
+      }
       result = await safeUpdate('transactions', payload, 'id', draft.id)
     }
     // 3. New transaction with installments
-    else if (advancedReady && Number(draft.installments) > 1) {
+    else if (advancedReady && Number(draft.installments) > 1 && draft.installment) {
       const startMonth = draft.start_month || draft.date.slice(0, 7)
       const day = Number(draft.date.slice(-2))
       const groupId = crypto.randomUUID()
@@ -505,8 +508,9 @@ function MainDashboard({ session, onSignOut }) {
     }
     // 4. Regular new transaction
     else {
-      if (draft.start_month && draft.start_month !== draft.date?.slice(0, 7)) {
-        payload.date = dateInMonth(draft.start_month, Number(draft.date.slice(-2)))
+      // Somente para compras no cartão de crédito com fatura no mês seguinte
+      if (isCreditPurchase && payload.invoice_month && payload.invoice_month !== payload.date.slice(0, 7)) {
+        payload.date = dateInMonth(payload.invoice_month, Number(draft.date.slice(-2)))
       }
       result = await safeInsert('transactions', { ...payload, user_id: session.user.id })
     }
@@ -965,6 +969,7 @@ function MainDashboard({ session, onSignOut }) {
           entry={modal.id ? modal : null}
           accounts={accounts}
           advancedReady={advancedReady}
+          month={month}
           onClose={() => setModal(null)}
           onSave={saveTransaction}
           onDelete={removeTransaction}
