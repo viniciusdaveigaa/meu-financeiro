@@ -102,8 +102,10 @@ export function NewsPopup({
               {groupedUpdates.map((group) => (
                 <section key={group.date} className="news-day-group">
                   <div className="news-day-header">
-                    <Calendar size={13} className="news-day-icon" />
-                    <span>{group.label}</span>
+                    <span className="news-day-title-wrap">
+                      <Calendar size={13} className="news-day-icon" />
+                      <span>{group.label}</span>
+                    </span>
                     <span className="news-day-badge">
                       {group.items.length} {group.items.length === 1 ? 'novidade' : 'novidades'}
                     </span>
