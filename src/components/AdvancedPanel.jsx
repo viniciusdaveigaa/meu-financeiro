@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import {
+  AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
   Check,
@@ -204,6 +205,26 @@ export function AdvancedPanel({
     e.preventDefault()
     if (!name.trim()) return
 
+    // Validação obrigatória de datas para cartão de crédito
+    if (kind === 'card' && cardType !== 'debit') {
+      const cDay = parseInt(closingDay, 10)
+      const dDay = parseInt(dueDay, 10)
+
+      if (!closingDay || isNaN(cDay) || cDay < 1 || cDay > 31) {
+        return dialog.alert(
+          'Por favor, informe o dia de fechamento da fatura (de 1 a 31). Essa data é obrigatória para calcular em qual fatura mensal suas compras serão lançadas.',
+          { title: 'Data de fechamento obrigatória' }
+        )
+      }
+
+      if (!dueDay || isNaN(dDay) || dDay < 1 || dDay > 31) {
+        return dialog.alert(
+          'Por favor, informe o dia de vencimento da fatura (de 1 a 31). Essa data é obrigatória para organizar o pagamento das suas faturas.',
+          { title: 'Data de vencimento obrigatória' }
+        )
+      }
+    }
+
     setAddingAccount(true)
     const currentUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id || 'default'
     const cleanName = name.trim()
@@ -254,11 +275,32 @@ export function AdvancedPanel({
     e.preventDefault()
     if (!editingAccount || !editingAccount.name.trim()) return
 
+    const cardTypeVal = editingAccount.kind === 'card' ? (editingAccount.card_type || 'credit') : null
+
+    // Validação obrigatória de datas ao atualizar cartão de crédito
+    if (editingAccount.kind === 'card' && cardTypeVal !== 'debit') {
+      const cVal = parseInt(editingAccount.closing_day, 10)
+      const dVal = parseInt(editingAccount.due_day, 10)
+
+      if (!editingAccount.closing_day || isNaN(cVal) || cVal < 1 || cVal > 31) {
+        return dialog.alert(
+          'Por favor, informe o dia de fechamento da fatura (de 1 a 31) para este cartão de crédito.',
+          { title: 'Data de fechamento obrigatória' }
+        )
+      }
+
+      if (!editingAccount.due_day || isNaN(dVal) || dVal < 1 || dVal > 31) {
+        return dialog.alert(
+          'Por favor, informe o dia de vencimento da fatura (de 1 a 31) para este cartão de crédito.',
+          { title: 'Data de vencimento obrigatória' }
+        )
+      }
+    }
+
     setSavingEdit(true)
     const currentUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id || 'default'
     const cleanName = editingAccount.name.trim()
 
-    const cardTypeVal = editingAccount.kind === 'card' ? (editingAccount.card_type || 'credit') : null
     const closingVal = editingAccount.kind === 'card' && cardTypeVal !== 'debit' && editingAccount.closing_day ? Math.min(31, Math.max(1, parseInt(editingAccount.closing_day, 10))) : null
     const dueVal = editingAccount.kind === 'card' && cardTypeVal !== 'debit' && editingAccount.due_day ? Math.min(31, Math.max(1, parseInt(editingAccount.due_day, 10))) : null
 
@@ -471,23 +513,25 @@ export function AdvancedPanel({
                           type="number"
                           min="1"
                           max="31"
-                          placeholder="Dia fecha"
+                          placeholder="Dia fecha *"
                           title="Dia de fechamento da fatura (1 a 31)"
                           style={{ width: '85px' }}
                           value={editingAccount.closing_day || ''}
                           onChange={(e) => setEditingAccount({ ...editingAccount, closing_day: e.target.value })}
                           disabled={savingEdit}
+                          required
                         />
                         <input
                           type="number"
                           min="1"
                           max="31"
-                          placeholder="Dia vence"
+                          placeholder="Dia vence *"
                           title="Dia de vencimento da fatura (1 a 31)"
                           style={{ width: '85px' }}
                           value={editingAccount.due_day || ''}
                           onChange={(e) => setEditingAccount({ ...editingAccount, due_day: e.target.value })}
                           disabled={savingEdit}
+                          required
                         />
                       </>
                     )}
@@ -545,13 +589,23 @@ export function AdvancedPanel({
                           <span className={`badge-pill ${acc.card_type === 'debit' ? 'badge-debit' : 'badge-credit'}`}>
                             {acc.card_type === 'debit' ? 'Cartão de Débito' : 'Cartão de Crédito'}
                           </span>
-                          {acc.card_type !== 'debit' && (acc.closing_day || acc.due_day) && (
+                          {acc.card_type !== 'debit' && acc.closing_day && acc.due_day ? (
                             <small className="acc-dates-text">
-                              {acc.closing_day ? `Fecha dia ${acc.closing_day}` : ''}
-                              {acc.closing_day && acc.due_day ? ' • ' : ''}
-                              {acc.due_day ? `Vence dia ${acc.due_day}` : ''}
+                              Fecha dia {acc.closing_day} • Vence dia {acc.due_day}
                             </small>
-                          )}
+                          ) : acc.card_type !== 'debit' ? (
+                            <small
+                              className="acc-dates-text acc-dates-missing"
+                              title="Clique no ícone de lápis para definir o dia de fechamento e vencimento da fatura"
+                            >
+                              <AlertTriangle size={11} />
+                              {!acc.closing_day && !acc.due_day
+                                ? 'Falta data de fechamento e vencimento'
+                                : !acc.closing_day
+                                ? 'Falta data de fechamento'
+                                : 'Falta data de vencimento'}
+                            </small>
+                          ) : null}
                         </>
                       ) : (
                         <small>Conta corrente / Carteira</small>
@@ -624,24 +678,32 @@ export function AdvancedPanel({
                   type="number"
                   min="1"
                   max="31"
-                  placeholder="Dia fecha"
+                  placeholder="Dia fecha *"
                   title="Dia de fechamento da fatura (1 a 31)"
                   style={{ width: '90px' }}
                   value={closingDay}
                   onChange={(e) => setClosingDay(e.target.value)}
                   disabled={addingAccount}
+                  required
                 />
                 <input
                   type="number"
                   min="1"
                   max="31"
-                  placeholder="Dia vence"
+                  placeholder="Dia vence *"
                   title="Dia de vencimento da fatura (1 a 31)"
                   style={{ width: '90px' }}
                   value={dueDay}
                   onChange={(e) => setDueDay(e.target.value)}
                   disabled={addingAccount}
+                  required
                 />
+                {(!closingDay || !dueDay) && (
+                  <div className="card-date-warning-hint">
+                    <AlertTriangle size={13} />
+                    <span>Informe os dias de fechamento e vencimento (1 a 31) para cadastrar o cartão.</span>
+                  </div>
+                )}
               </>
             )}
             <select

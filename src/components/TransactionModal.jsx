@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
   Calendar,
@@ -365,6 +366,12 @@ export function TransactionModal({
                                 ? `Fechamento dia ${selectedAccount.closing_day}${selectedAccount.due_day ? ` • Vencimento dia ${selectedAccount.due_day}` : ''}. Não reduz o saldo em conta bancária agora.`
                                 : 'Lançado na fatura em aberto. Não reduz o saldo disponível imediatamente.'}
                             </small>
+                            {!selectedAccount.closing_day && (
+                              <div className="credit-invoice-warning-text">
+                                <AlertTriangle size={12} />
+                                <span>Cartão sem data de fechamento configurada nas Contas. Adicione as datas para organizar suas faturas automaticamente.</span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <small className="debit-info-hint-text">
