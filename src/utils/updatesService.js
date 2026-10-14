@@ -5,6 +5,60 @@ const STORAGE_READS_PREFIX = 'sc_read_updates'
 // Registros reais e fidedignos das atualizações efetivamente implementadas no sistema
 export const INITIAL_UPDATES_SEED = [
   {
+    id: 'seed-upd-privacy-responsive',
+    title: 'Visualização Ampliada da Política de Privacidade e Menus 2x2 no Mobile',
+    description: 'O modal de Privacidade, Termos de Uso e LGPD foi ampliado no computador para 960px com visualização espaçosa e confortável. No celular, os menus de abas foram reestruturados em um grid de 2 colunas totalmente visível e acessível, eliminando opções cortadas.',
+    category: 'improvement',
+    version: '2.2.0',
+    published_at: '2026-10-13T22:40:00Z',
+    is_published: true
+  },
+  {
+    id: 'seed-upd-date-fix-normal-accounts',
+    title: 'Correção de Data e Mês em Lançamentos de Contas Bancárias',
+    description: 'Lançamentos em contas correntes, débito, dinheiro e receitas agora mantêm rigorosamente a data e o mês escolhidos no extrato, reservando a virada de fatura estritamente para despesas a crédito.',
+    category: 'fix',
+    version: '2.2.0',
+    published_at: '2026-10-13T22:15:00Z',
+    is_published: true
+  },
+  {
+    id: 'seed-upd-multi-csv-import',
+    title: 'Importação Simultânea de Múltiplos Arquivos CSV',
+    description: 'Agora você pode selecionar e importar mais de um arquivo CSV de uma só vez na tela de Extrato. O extrator processa todos os extratos em lote com detecção inteligente de duplicatas e categorização automática.',
+    category: 'feature',
+    version: '2.2.0',
+    published_at: '2026-10-13T21:45:00Z',
+    is_published: true
+  },
+  {
+    id: 'seed-upd-bulk-delete-month',
+    title: 'Exclusão em Lote dos Lançamentos do Mês Selecionado',
+    description: 'Novo botão ao final da página de Extrato de Transações para excluir todos os lançamentos do mês ativo de forma segura, com tela de confirmação de segurança detalhando a quantidade de registros afetados.',
+    category: 'feature',
+    version: '2.2.0',
+    published_at: '2026-10-13T21:20:00Z',
+    is_published: true
+  },
+  {
+    id: 'seed-upd-category-all-icons',
+    title: 'Biblioteca Completa de Ícones no Cadastro Rápido de Categorias',
+    description: 'Ao cadastrar uma categoria diretamente na criação de um lançamento financeiro, agora estão disponíveis todos os ícones da biblioteca completa do sistema, padronizando a experiência com a tela de configurações.',
+    category: 'improvement',
+    version: '2.2.0',
+    published_at: '2026-10-13T20:50:00Z',
+    is_published: true
+  },
+  {
+    id: 'seed-upd-card-validation-clarity',
+    title: 'Validação e Descrições no Cadastro de Cartões de Crédito',
+    description: 'Melhoria na interface de cadastro de cartões com avisos obrigatórios para preenchimento dos dias de fechamento e vencimento da fatura, além de descrições claras para evitar erros nos ciclos financeiros.',
+    category: 'improvement',
+    version: '2.2.0',
+    published_at: '2026-10-13T20:20:00Z',
+    is_published: true
+  },
+  {
     id: 'seed-upd-csv-nubank',
     title: 'Importação Aprimorada do Nubank e Extratos Pix',
     description: 'Sanitização inteligente de lançamentos Pix no extrato CSV do Nubank, remoção de poluição de agência e conta nas descrições, categorização automática inteligente (Assinaturas, Transporte, Alimentação) e ampliação de limite de caracteres para garantir importação perfeita.',
