@@ -41,13 +41,19 @@ import {
   getMonthRange,
   changeMonth,
   dateInMonth,
-  greeting
+  greeting,
+  isNeutralEntry,
+  getSavedPaidStatusMap,
+  savePaidStatusLocal,
+  getSavedCardLimits,
+  resolveIsPaid
 } from './utils/formatters'
 import { getSavedAccountLogos, resolveBankLogo } from './constants/bankLogos'
+import { FinancialAccountsHub } from './components/FinancialAccountsHub'
 
 function calculateTotal(items, type) {
   return items
-    .filter((item) => item.type === type && item.affects_balance !== false)
+    .filter((item) => item.type === type && !isNeutralEntry(item))
     .reduce((sum, item) => sum + Number(item.amount), 0)
 }
 
@@ -76,6 +82,8 @@ function MainDashboard({ session, onSignOut }) {
   const [budgets, setBudgets] = useState([])
   const [accounts, setAccounts] = useState([])
   const [recurring, setRecurring] = useState([])
+  const [paidMap, setPaidMap] = useState(() => getSavedPaidStatusMap(session?.user?.id))
+  const [externalTxFilter, setExternalTxFilter] = useState(null)
   const [budgetReady, setBudgetReady] = useState(true)
   const [advancedReady, setAdvancedReady] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -210,9 +218,11 @@ function MainDashboard({ session, onSignOut }) {
       setAdvancedReady(!accountsRes.error && !recurringRes.error)
       if (!accountsRes.error) {
         const localLogos = getSavedAccountLogos(session.user.id)
+        const localLimits = getSavedCardLimits(session.user.id)
         const accountsWithLogos = (accountsRes.data || []).map((acc) => ({
           ...acc,
-          logo: acc.logo || localLogos[acc.id] || resolveBankLogo('', acc.name, acc.kind).id
+          logo: acc.logo || localLogos[acc.id] || resolveBankLogo('', acc.name, acc.kind).id,
+          credit_limit: Number(acc.credit_limit) || Number(localLimits[acc.id]) || 0
         }))
         setAccounts(accountsWithLogos)
       }
@@ -226,6 +236,7 @@ function MainDashboard({ session, onSignOut }) {
     if (!session?.user?.id) return
     const metaName = session.user.user_metadata?.full_name || session.user.user_metadata?.name
     if (metaName) setUserName(metaName)
+    setPaidMap(getSavedPaidStatusMap(session.user.id))
 
     supabase
       .from('profiles')
@@ -254,6 +265,70 @@ function MainDashboard({ session, onSignOut }) {
     return () => clearTimeout(prefetchTimer)
   }, [session?.user?.id])
 
+  // Auto-gera lançamentos recorrentes ao abrir o app ou trocar de mês (sem depender de abrir a aba Planejamento)
+  useEffect(() => {
+    const runAutoRecurring = async () => {
+      if (!recurring.length || window.__generatingRecurringLock) return
+      const targetMonth = `${month}-01`
+      const due = recurring.filter(
+        (item) =>
+          item.active &&
+          item.start_date <= targetMonth &&
+          (!item.last_generated_month || item.last_generated_month < targetMonth)
+      )
+
+      if (!due.length) return
+      window.__generatingRecurringLock = true
+      try {
+        const allRows = []
+        const itemIdsToUpdate = []
+
+        for (const item of due) {
+          const lastMonth = (
+            item.last_generated_month || `${item.start_date.slice(0, 7)}-01`
+          ).slice(0, 7)
+          let cursor = changeMonth(lastMonth, 1)
+
+          while (cursor <= month) {
+            allRows.push({
+              user_id: item.user_id,
+              account_id: item.account_id,
+              type: item.type,
+              description: item.description,
+              amount: item.amount,
+              category: item.category,
+              date: dateInMonth(cursor, item.day_of_month)
+            })
+            cursor = changeMonth(cursor, 1)
+          }
+          itemIdsToUpdate.push(item.id)
+        }
+
+        if (allRows.length > 0) {
+          const { error: insertErr } = await supabase.from('transactions').insert(allRows)
+          if (!insertErr) {
+            await Promise.all(
+              itemIdsToUpdate.map((id) =>
+                supabase
+                  .from('recurring_transactions')
+                  .update({ last_generated_month: targetMonth })
+                  .eq('id', id)
+              )
+            )
+            await loadConfig()
+            await loadData()
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao gerar recorrências automáticas:', err)
+      } finally {
+        window.__generatingRecurringLock = false
+      }
+    }
+
+    runAutoRecurring()
+  }, [recurring, month])
+
   const loadSeqRef = useRef(0)
 
   const loadData = async (refreshConfig = false) => {
@@ -261,7 +336,7 @@ function MainDashboard({ session, onSignOut }) {
     setLoading(true)
     setLoadError('')
     const range = getMonthRange(month)
-    // Busca os últimos 12 meses trazendo apenas as colunas essenciais para o gráfico histórico
+    // Busca os últimos 12 meses trazendo as colunas completas para histórico, saldos e faturas
     const twelveMonthsAgo = `${changeMonth(month, -11)}-01`
 
     try {
@@ -278,7 +353,7 @@ function MainDashboard({ session, onSignOut }) {
           .order('date', { ascending: false }),
         supabase
           .from('transactions')
-          .select('id, date, type, amount, affects_balance, category')
+          .select('*')
           .gte('date', twelveMonthsAgo)
           .lte('date', range.to)
           .order('date', { ascending: true }),
@@ -389,7 +464,7 @@ function MainDashboard({ session, onSignOut }) {
           .filter(
             (item) =>
               item.type === 'expense' &&
-              item.affects_balance !== false &&
+              !isNeutralEntry(item) &&
               item.category === cat
           )
           .reduce((sum, item) => sum + Number(item.amount), 0)
@@ -403,10 +478,102 @@ function MainDashboard({ session, onSignOut }) {
       .filter((item) => item.amount > 0)
   }, [allKnownCategories, expensesByCategory])
 
+  // Fallback gracioso caso colunas novas ainda não tenham sido migradas no Supabase
+  const safeInsert = async (table, rows) => {
+    let res = await supabase.from(table).insert(rows).select()
+    if (
+      res.error &&
+      (res.error.message?.includes('payment_method') ||
+        res.error.message?.includes('invoice_month') ||
+        res.error.message?.includes('show_in_statement') ||
+        res.error.message?.includes('is_paid') ||
+        res.error.message?.includes('transfer_group_id'))
+    ) {
+      const stripCols = ({
+        payment_method,
+        invoice_month,
+        show_in_statement,
+        is_paid,
+        transfer_group_id,
+        ...rest
+      }) => rest
+      const cleanRows = Array.isArray(rows) ? rows.map(stripCols) : stripCols(rows)
+      res = await supabase.from(table).insert(cleanRows).select()
+    }
+    return res
+  }
+
+  const safeUpdate = async (table, data, matchCol, matchVal) => {
+    let res = await supabase.from(table).update(data).eq(matchCol, matchVal).select()
+    if (
+      res.error &&
+      (res.error.message?.includes('payment_method') ||
+        res.error.message?.includes('invoice_month') ||
+        res.error.message?.includes('show_in_statement') ||
+        res.error.message?.includes('is_paid') ||
+        res.error.message?.includes('transfer_group_id'))
+    ) {
+      const {
+        payment_method,
+        invoice_month,
+        show_in_statement,
+        is_paid,
+        transfer_group_id,
+        ...rest
+      } = data
+      res = await supabase.from(table).update(rest).eq(matchCol, matchVal).select()
+    }
+    return res
+  }
+
   // Save transaction handler
   const saveTransaction = async (draft) => {
+    // 0. Transferência entre contas
+    if (draft.type === 'transfer') {
+      const transferGroupId = crypto.randomUUID()
+      const transferRows = [
+        {
+          user_id: session.user.id,
+          type: 'expense',
+          description: draft.description,
+          amount: draft.amount,
+          category: 'Transferencia',
+          date: draft.date,
+          account_id: draft.account_id || null,
+          affects_balance: false,
+          show_in_statement: true,
+          payment_method: 'transfer',
+          is_paid: true,
+          transfer_group_id: transferGroupId
+        },
+        {
+          user_id: session.user.id,
+          type: 'income',
+          description: draft.description,
+          amount: draft.amount,
+          category: 'Transferencia',
+          date: draft.date,
+          account_id: draft.to_account_id || null,
+          affects_balance: false,
+          show_in_statement: true,
+          payment_method: 'transfer',
+          is_paid: true,
+          transfer_group_id: transferGroupId
+        }
+      ]
+
+      const transferRes = await safeInsert('transactions', transferRows)
+      if (transferRes.error) {
+        return dialog.alert(transferRes.error.message, { title: 'Transferência não realizada' })
+      }
+      setModal(null)
+      loadData()
+      return
+    }
+
     const isCreditPurchase = draft.type === 'expense' && draft.payment_method === 'credit'
-    const affectsBalance = isCreditPurchase ? false : (draft.affects_balance !== false)
+    const affectsBalance = isCreditPurchase ? true : (draft.affects_balance !== false)
+    const isPaidVal = draft.is_paid !== false
 
     const payload = {
       type: draft.type,
@@ -417,32 +584,12 @@ function MainDashboard({ session, onSignOut }) {
       affects_balance: affectsBalance,
       show_in_statement: draft.show_in_statement !== false,
       payment_method: draft.payment_method || null,
-      invoice_month: isCreditPurchase ? (draft.invoice_month || draft.date.slice(0, 7)) : null
+      invoice_month: isCreditPurchase ? (draft.invoice_month || draft.date.slice(0, 7)) : null,
+      is_paid: isPaidVal
     }
 
     if (advancedReady) {
       payload.account_id = draft.account_id || null
-    }
-
-    // Fallback gracioso caso colunas novas ainda não tenham sido migradas no Supabase
-    const safeInsert = async (table, rows) => {
-      let res = await supabase.from(table).insert(rows)
-      if (res.error && (res.error.message?.includes('payment_method') || res.error.message?.includes('invoice_month') || res.error.message?.includes('show_in_statement'))) {
-        const cleanRows = Array.isArray(rows)
-          ? rows.map(({ payment_method, invoice_month, show_in_statement, ...rest }) => rest)
-          : (({ payment_method, invoice_month, show_in_statement, ...rest }) => rest)(rows)
-        res = await supabase.from(table).insert(cleanRows)
-      }
-      return res
-    }
-
-    const safeUpdate = async (table, data, matchCol, matchVal) => {
-      let res = await supabase.from(table).update(data).eq(matchCol, matchVal)
-      if (res.error && (res.error.message?.includes('payment_method') || res.error.message?.includes('invoice_month') || res.error.message?.includes('show_in_statement'))) {
-        const { payment_method, invoice_month, show_in_statement, ...rest } = data
-        res = await supabase.from(table).update(rest).eq(matchCol, matchVal)
-      }
-      return res
     }
 
     let result
@@ -483,12 +630,24 @@ function MainDashboard({ session, onSignOut }) {
         result = await safeInsert('transactions', futureRows)
       }
     }
-    // 2. Existing simple edit
+    // 2. Existing edit (single or all installments in group)
     else if (draft.id) {
       if (isCreditPurchase && payload.invoice_month && payload.invoice_month !== payload.date.slice(0, 7)) {
         payload.date = dateInMonth(payload.invoice_month, Number(draft.date.slice(-2)))
       }
       result = await safeUpdate('transactions', payload, 'id', draft.id)
+
+      // Se o usuário escolheu atualizar todas as parcelas da compra
+      if (!result.error && draft.installment_group_id && draft.installment_scope === 'all') {
+        const sharedFields = {
+          description: draft.description,
+          amount: draft.amount,
+          category: draft.category,
+          account_id: draft.account_id || null,
+          payment_method: draft.payment_method || null
+        }
+        await safeUpdate('transactions', sharedFields, 'installment_group_id', draft.installment_group_id)
+      }
     }
     // 3. New transaction with installments
     else if (advancedReady && Number(draft.installments) > 1 && draft.installment) {
@@ -513,6 +672,19 @@ function MainDashboard({ session, onSignOut }) {
         payload.date = dateInMonth(payload.invoice_month, Number(draft.date.slice(-2)))
       }
       result = await safeInsert('transactions', { ...payload, user_id: session.user.id })
+    }
+
+    // Salva status de pago no cache local também
+    if (!result.error) {
+      const savedRows = Array.isArray(result.data) ? result.data : result.data ? [result.data] : []
+      if (savedRows.length > 0) {
+        savedRows.forEach((r) => {
+          if (r?.id) savePaidStatusLocal(session.user.id, r.id, isPaidVal)
+        })
+      } else if (draft.id) {
+        savePaidStatusLocal(session.user.id, draft.id, isPaidVal)
+      }
+      setPaidMap(getSavedPaidStatusMap(session.user.id))
     }
 
     // Handle recurring series if checked
@@ -579,8 +751,43 @@ function MainDashboard({ session, onSignOut }) {
     loadData()
   }
 
-  // Remove transaction handler
+  // Remove transaction handler (suporta exclusão de parcela única ou de todas as parcelas)
   const removeTransaction = async (item) => {
+    // Caso seja compra parcelada, pergunta se deseja excluir apenas esta parcela ou todas
+    if (item.installment_group_id) {
+      const choice = await dialog.confirm(
+        `O lançamento “${item.description}” faz parte de um parcelamento (${item.installment_number}/${item.installment_total}). Você deseja excluir todas as parcelas desta compra ou apenas esta parcela do mês?`,
+        {
+          title: 'Excluir compra parcelada?',
+          confirmLabel: `Excluir todas (${item.installment_total}x)`,
+          secondaryLabel: 'Só esta parcela',
+          secondaryValue: 'single',
+          cancelLabel: 'Cancelar'
+        }
+      )
+
+      if (!choice) return
+
+      const deleteQuery =
+        choice === 'single'
+          ? supabase.from('transactions').delete().eq('id', item.id)
+          : supabase
+              .from('transactions')
+              .delete()
+              .eq('installment_group_id', item.installment_group_id)
+
+      const { error } = await deleteQuery
+      if (error) {
+        return dialog.alert(error.message, { title: 'Lançamento não excluído' })
+      }
+
+      if (modal?.id === item.id) {
+        setModal(null)
+      }
+      loadData()
+      return
+    }
+
     let recurringQuery = supabase
       .from('recurring_transactions')
       .select('id')
@@ -644,6 +851,74 @@ function MainDashboard({ session, onSignOut }) {
       window.dispatchEvent(new Event('recurring-data-changed'))
     }
     loadData()
+  }
+
+  // Alternar status Pago / Pendente em 1 clique na lista
+  const handleTogglePaid = async (item) => {
+    if (!session?.user?.id || !item?.id) return
+    const currentPaid = resolveIsPaid(item, paidMap)
+    const nextPaid = !currentPaid
+    savePaidStatusLocal(session.user.id, item.id, nextPaid)
+    setPaidMap(getSavedPaidStatusMap(session.user.id))
+    setEntries((prev) =>
+      prev.map((e) => (e.id === item.id ? { ...e, is_paid: nextPaid } : e))
+    )
+    await safeUpdate('transactions', { is_paid: nextPaid }, 'id', item.id)
+  }
+
+  // Ações em lote (Multi-seleção no Extrato)
+  const handleBulkDelete = async (ids) => {
+    if (!ids?.length) return
+    const confirmed = await dialog.confirm(
+      `Você selecionou ${ids.length} lançamento(s) para exclusão permanente. Deseja continuar?`,
+      {
+        title: `Excluir ${ids.length} lançamento(s)?`,
+        confirmLabel: 'Sim, excluir selecionados'
+      }
+    )
+    if (!confirmed) return
+    const { error } = await supabase.from('transactions').delete().in('id', ids)
+    if (error) {
+      return dialog.alert(error.message, { title: 'Erro ao excluir em lote' })
+    }
+    loadData()
+  }
+
+  const handleBulkTogglePaid = async (ids, isPaid) => {
+    if (!ids?.length || !session?.user?.id) return
+    ids.forEach((id) => savePaidStatusLocal(session.user.id, id, isPaid))
+    setPaidMap(getSavedPaidStatusMap(session.user.id))
+    setEntries((prev) =>
+      prev.map((e) => (ids.includes(e.id) ? { ...e, is_paid: isPaid } : e))
+    )
+    await supabase
+      .from('transactions')
+      .update({ is_paid: isPaid })
+      .in('id', ids)
+      .then(() => {})
+      .catch(() => {})
+  }
+
+  const handleBulkChangeCategory = async (ids, newCategory) => {
+    if (!ids?.length || !newCategory) return
+    const { error } = await supabase
+      .from('transactions')
+      .update({ category: newCategory })
+      .in('id', ids)
+    if (error) {
+      return dialog.alert(error.message, { title: 'Erro ao alterar categoria' })
+    }
+    loadData()
+  }
+
+  const handleFilterByAccount = (accountId) => {
+    setExternalTxFilter({ accountId, category: 'ALL', ts: Date.now() })
+    setActiveTab('transactions')
+  }
+
+  const handleFilterByCategory = (categoryName) => {
+    setExternalTxFilter({ accountId: 'ALL', category: categoryName, ts: Date.now() })
+    setActiveTab('transactions')
   }
 
   // Excluir todos os lançamentos do mês
@@ -784,12 +1059,10 @@ function MainDashboard({ session, onSignOut }) {
                 </p>
               </div>
 
-              {/* Oculta o seletor de mês na aba de Planejamento */}
-              {activeTab !== 'planning' && (
-                <div className="hero-actions-block">
-                  <MonthPicker month={month} onChange={setMonth} />
-                </div>
-              )}
+              {/* Seletor de mês visível também na aba de Planejamento (para Orçamentos e Contas) */}
+              <div className="hero-actions-block">
+                <MonthPicker month={month} onChange={setMonth} />
+              </div>
             </section>
 
             {/* Error Banner */}
@@ -828,6 +1101,25 @@ function MainDashboard({ session, onSignOut }) {
                   expensesByCategory={expensesByCategory}
                 />
 
+                {/* Hub de Faturas de Cartão, Saldos por Conta, Patrimônio e Resumo Anual */}
+                <FinancialAccountsHub
+                  userId={session?.user?.id}
+                  month={month}
+                  accounts={accounts}
+                  entries={entries}
+                  allEntries={allEntries}
+                  onFilterAccount={handleFilterByAccount}
+                  onOpenPlanningAccounts={() => {
+                    setActiveTab('planning')
+                    setPlanningSubTab('accounts')
+                  }}
+                  onOpenSavings={() => {
+                    setActiveTab('planning')
+                    setPlanningSubTab('savings')
+                  }}
+                  onNewTransfer={() => setModal({ type: 'transfer' })}
+                />
+
                 {/* Charts Grid */}
                 <section className="dashboard-analytics-grid">
                   <FlowChart
@@ -836,7 +1128,11 @@ function MainDashboard({ session, onSignOut }) {
                     onSelectMonth={(targetMonth) => setMonth(targetMonth)}
                     onResetMonth={() => setMonth(getMonthKey(new Date()))}
                   />
-                  <CategoryBreakdown grouped={groupedCategories} />
+                  <CategoryBreakdown
+                    grouped={groupedCategories}
+                    budgets={budgets}
+                    onSelectCategory={handleFilterByCategory}
+                  />
                 </section>
 
                 {/* Quick Transactions Preview */}
@@ -849,6 +1145,9 @@ function MainDashboard({ session, onSignOut }) {
                     onRemove={removeTransaction}
                     onRemoveAllMonth={removeAllMonthTransactions}
                     onAddNew={() => setModal({})}
+                    onDuplicate={(dup) => setModal(dup)}
+                    onTogglePaid={handleTogglePaid}
+                    paidMap={paidMap}
                     compact={true}
                     limit={6}
                     onViewAll={() => setActiveTab('transactions')}
@@ -869,6 +1168,14 @@ function MainDashboard({ session, onSignOut }) {
                   onRemove={removeTransaction}
                   onRemoveAllMonth={removeAllMonthTransactions}
                   onAddNew={() => setModal({})}
+                  onDuplicate={(dup) => setModal(dup)}
+                  onTogglePaid={handleTogglePaid}
+                  onBulkDelete={handleBulkDelete}
+                  onBulkTogglePaid={handleBulkTogglePaid}
+                  onBulkChangeCategory={handleBulkChangeCategory}
+                  paidMap={paidMap}
+                  externalFilter={externalTxFilter}
+                  onClearExternalFilter={() => setExternalTxFilter(null)}
                   compact={false}
                   month={month}
                 />
@@ -966,10 +1273,11 @@ function MainDashboard({ session, onSignOut }) {
       {/* Transaction Modal */}
       {modal && (
         <TransactionModal
-          entry={modal.id ? modal : null}
+          entry={Object.keys(modal).length > 0 ? modal : null}
           accounts={accounts}
           advancedReady={advancedReady}
           month={month}
+          paidMap={paidMap}
           onClose={() => setModal(null)}
           onSave={saveTransaction}
           onDelete={removeTransaction}

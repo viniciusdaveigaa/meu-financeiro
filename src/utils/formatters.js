@@ -172,3 +172,114 @@ export function calculateInvoiceMonth(purchaseDateStr, closingDay) {
   return baseMonth
 }
 
+/**
+ * Define se um lançamento é neutro (ex.: Reserva / Transferência entre contas)
+ * Compras no cartão de crédito (payment_method === 'credit') NÃO são neutras:
+ * elas devem somar normalmente nas Saídas, Categorias, Orçamentos e Gráficos do mês da fatura.
+ */
+export function isNeutralEntry(item) {
+  if (!item) return false
+  if (item.payment_method === 'transfer' || item.category === 'Transferencia') return true
+  if (item.payment_method === 'credit') return false
+  return item.affects_balance === false
+}
+
+/**
+ * Identifica se o lançamento é uma despesa no cartão de crédito
+ */
+export function isCreditEntry(item, account) {
+  if (!item || item.type !== 'expense') return false
+  if (item.payment_method === 'credit') return true
+  if (account?.kind === 'card' && account?.card_type !== 'debit' && item.payment_method !== 'debit') {
+    return true
+  }
+  return false
+}
+
+// Persistência local complementar para status Pago/Pendente (garante funcionamento mesmo sem migração SQL)
+const PAID_STORAGE_PREFIX = 'sc_tx_paid_status'
+export function getSavedPaidStatusMap(userId = 'default') {
+  try {
+    const raw = localStorage.getItem(`${PAID_STORAGE_PREFIX}_${userId}`)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function savePaidStatusLocal(userId = 'default', txIds = [], isPaid = true) {
+  try {
+    const current = getSavedPaidStatusMap(userId)
+    const ids = Array.isArray(txIds) ? txIds : [txIds]
+    ids.forEach((id) => {
+      if (id) current[id] = Boolean(isPaid)
+    })
+    localStorage.setItem(`${PAID_STORAGE_PREFIX}_${userId}`, JSON.stringify(current))
+    return current
+  } catch {
+    return {}
+  }
+}
+
+export function resolveIsPaid(item, paidMap = {}) {
+  if (!item) return true
+  if (item.id && Object.prototype.hasOwnProperty.call(paidMap, item.id)) {
+    return Boolean(paidMap[item.id])
+  }
+  if (typeof item.is_paid === 'boolean') {
+    return item.is_paid
+  }
+  return true
+}
+
+// Persistência local complementar para Limite de Cartão de Crédito
+const CARD_LIMIT_PREFIX = 'sc_card_limits'
+export function getSavedCardLimits(userId = 'default') {
+  try {
+    const raw = localStorage.getItem(`${CARD_LIMIT_PREFIX}_${userId}`)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function saveCardLimitLocal(userId = 'default', accountId, limitValue) {
+  if (!accountId) return
+  try {
+    const current = getSavedCardLimits(userId)
+    if (limitValue && Number(limitValue) > 0) {
+      current[accountId] = Number(limitValue)
+    } else {
+      delete current[accountId]
+    }
+    localStorage.setItem(`${CARD_LIMIT_PREFIX}_${userId}`, JSON.stringify(current))
+  } catch {}
+}
+
+// Persistência local para controle de Faturas Pagas no mês
+const PAID_INVOICES_PREFIX = 'sc_paid_invoices'
+export function getPaidInvoicesMap(userId = 'default') {
+  try {
+    const raw = localStorage.getItem(`${PAID_INVOICES_PREFIX}_${userId}`)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function setInvoicePaidStatus(userId = 'default', cardId, monthKey, isPaid) {
+  if (!cardId || !monthKey) return {}
+  try {
+    const current = getPaidInvoicesMap(userId)
+    const key = `${cardId}_${monthKey}`
+    if (isPaid) {
+      current[key] = new Date().toISOString()
+    } else {
+      delete current[key]
+    }
+    localStorage.setItem(`${PAID_INVOICES_PREFIX}_${userId}`, JSON.stringify(current))
+    return { ...current }
+  } catch {
+    return {}
+  }
+}

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { ChartPie } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { ArrowRight, BarChart3, ChartPie } from 'lucide-react'
 import { useCategories } from '../context/CategoryContext'
 import { CategoryIcon, Money } from './ui'
 
@@ -7,21 +7,32 @@ const RADIUS = 70
 const STROKE = 18
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
-export function CategoryBreakdown({ grouped }) {
+export function CategoryBreakdown({ grouped, budgets = [], onSelectCategory }) {
   const { getMeta } = useCategories()
   const [active, setActive] = useState(null)
+  const [viewMode, setViewMode] = useState('donut') // 'donut' | 'bars'
+
+  const budgetMap = useMemo(
+    () => Object.fromEntries((budgets || []).map((b) => [b.category, Number(b.amount)])),
+    [budgets]
+  )
+
   const sorted = [...grouped].sort((a, b) => b.amount - a.amount)
   const total = sorted.reduce((sum, item) => sum + item.amount, 0)
   const gap = sorted.length > 1 ? 3 : 0
 
   let offset = 0
   const segments = sorted.map((item) => {
-    const length = (item.amount / total) * CIRCUMFERENCE
+    const length = total > 0 ? (item.amount / total) * CIRCUMFERENCE : 0
+    const budgetLimit = budgetMap[item.category] || 0
+    const budgetPct = budgetLimit > 0 ? Math.round((item.amount / budgetLimit) * 100) : null
     const segment = {
       ...item,
       length: Math.max(length - gap, 0.6),
       offset,
-      percent: Math.round((item.amount / total) * 100)
+      percent: total > 0 ? Math.round((item.amount / total) * 100) : 0,
+      budgetLimit,
+      budgetPct
     }
     offset += length
     return segment
@@ -32,9 +43,34 @@ export function CategoryBreakdown({ grouped }) {
     <article className="card category-card">
       <header className="card-head">
         <div>
-          <span className="eyebrow">Distribuição</span>
+          <span className="eyebrow">Distribuição & Metas</span>
           <h3 className="card-title">Para onde foi o dinheiro</h3>
         </div>
+
+        {sorted.length > 0 && (
+          <div className="segmented" role="tablist" aria-label="Visualização de categorias">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'donut'}
+              className={viewMode === 'donut' ? 'active' : ''}
+              onClick={() => setViewMode('donut')}
+              title="Visualização em Rosca"
+            >
+              <ChartPie size={13} /> Rosca
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'bars'}
+              className={viewMode === 'bars' ? 'active' : ''}
+              onClick={() => setViewMode('bars')}
+              title="Comparativo em Barras"
+            >
+              <BarChart3 size={13} /> Ranking
+            </button>
+          </div>
+        )}
       </header>
 
       {sorted.length === 0 ? (
@@ -43,69 +79,90 @@ export function CategoryBreakdown({ grouped }) {
           <p>Nenhuma saída registrada neste mês.</p>
         </div>
       ) : (
-        <div className="donut-layout">
-          <div className="donut-wrap">
-            <svg viewBox="0 0 180 180" className="donut" role="img" aria-label="Gastos por categoria">
-              <circle cx="90" cy="90" r={RADIUS} className="donut-track" strokeWidth={STROKE} fill="none" />
-              <g transform="rotate(-90 90 90)">
-                {segments.map((item) => {
-                  const meta = getMeta(item.category)
-                  const isActive = active === item.category
-                  return (
-                    <circle
-                      key={item.category}
-                      cx="90"
-                      cy="90"
-                      r={RADIUS}
-                      fill="none"
-                      stroke={meta.color}
-                      strokeWidth={isActive ? STROKE + 7 : STROKE}
-                      strokeDasharray={`${item.length} ${CIRCUMFERENCE - item.length}`}
-                      strokeDashoffset={-item.offset}
-                      className={`donut-seg ${active && !isActive ? 'dim' : ''}`}
-                      onMouseEnter={() => setActive(item.category)}
-                      onMouseLeave={() => setActive(null)}
-                      onClick={() =>
-                        setActive((value) => (value === item.category ? null : item.category))
-                      }
-                    />
-                  )
-                })}
-              </g>
-            </svg>
-            <div className="donut-center">
-              {activeItem ? (
-                <>
-                  <span>{getMeta(activeItem.category).label}</span>
-                  <strong><Money value={activeItem.amount} /></strong>
-                  <small>{activeItem.percent}% das saídas</small>
-                </>
-              ) : (
-                <>
-                  <span>Total de saídas</span>
-                  <strong><Money value={total} /></strong>
-                  <small>{sorted.length} {sorted.length === 1 ? 'categoria' : 'categorias'}</small>
-                </>
-              )}
+        <div className={`donut-layout ${viewMode === 'bars' ? 'mode-bars-only' : ''}`}>
+          {viewMode === 'donut' && (
+            <div className="donut-wrap">
+              <svg viewBox="0 0 180 180" className="donut" role="img" aria-label="Gastos por categoria">
+                <circle cx="90" cy="90" r={RADIUS} className="donut-track" strokeWidth={STROKE} fill="none" />
+                <g transform="rotate(-90 90 90)">
+                  {segments.map((item) => {
+                    const meta = getMeta(item.category)
+                    const isActive = active === item.category
+                    return (
+                      <circle
+                        key={item.category}
+                        cx="90"
+                        cy="90"
+                        r={RADIUS}
+                        fill="none"
+                        stroke={meta.color}
+                        strokeWidth={isActive ? STROKE + 7 : STROKE}
+                        strokeDasharray={`${item.length} ${CIRCUMFERENCE - item.length}`}
+                        strokeDashoffset={-item.offset}
+                        className={`donut-seg ${active && !isActive ? 'dim' : ''}`}
+                        onMouseEnter={() => setActive(item.category)}
+                        onMouseLeave={() => setActive(null)}
+                        onClick={() =>
+                          setActive((value) => (value === item.category ? null : item.category))
+                        }
+                      />
+                    )
+                  })}
+                </g>
+              </svg>
+              <div className="donut-center">
+                {activeItem ? (
+                  <>
+                    <span>{getMeta(activeItem.category).label}</span>
+                    <strong><Money value={activeItem.amount} /></strong>
+                    <small>{activeItem.percent}% das saídas</small>
+                    {onSelectCategory && (
+                      <button
+                        type="button"
+                        className="donut-filter-link"
+                        onClick={() => onSelectCategory(activeItem.category)}
+                      >
+                        Filtrar <ArrowRight size={11} />
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <span>Total de saídas</span>
+                    <strong><Money value={total} /></strong>
+                    <small>{sorted.length} {sorted.length === 1 ? 'categoria' : 'categorias'}</small>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <ul className="cat-legend">
             {segments.map((item) => {
               const meta = getMeta(item.category)
+              const overBudget = item.budgetPct !== null && item.budgetPct > 100
               return (
                 <li
                   key={item.category}
                   className={`${active === item.category ? 'active' : ''} ${
                     active && active !== item.category ? 'dim' : ''
-                  }`}
+                  } ${onSelectCategory ? 'is-clickable' : ''}`}
                   onMouseEnter={() => setActive(item.category)}
                   onMouseLeave={() => setActive(null)}
+                  onClick={() => onSelectCategory?.(item.category)}
+                  title={onSelectCategory ? `Clique para filtrar lançamentos de ${meta.label}` : meta.label}
                 >
                   <CategoryIcon category={item.category} size={34} />
                   <div className="cat-legend-info">
                     <div className="cat-legend-line">
-                      <span>{meta.label}</span>
+                      <span className="cat-legend-name">
+                        {meta.label}
+                        {item.budgetPct !== null && (
+                          <em className={`cat-budget-pill ${overBudget ? 'over' : item.budgetPct >= 80 ? 'warn' : 'ok'}`}>
+                            {item.budgetPct}% da meta
+                          </em>
+                        )}
+                      </span>
                       <Money value={item.amount} />
                     </div>
                     <div className="bar-track thin">
@@ -122,3 +179,4 @@ export function CategoryBreakdown({ grouped }) {
     </article>
   )
 }
+

@@ -5,6 +5,33 @@ const STORAGE_READS_PREFIX = 'sc_read_updates'
 // Registros reais e fidedignos das atualizações efetivamente implementadas no sistema
 export const INITIAL_UPDATES_SEED = [
   {
+    id: 'seed-upd-hub-faturas-contas-patrimonio',
+    title: 'Novo Hub de Faturas de Cartão, Saldos por Conta e Patrimônio Anual',
+    description: 'Painel interativo na Visão Geral exibindo faturas mensais de cada cartão de crédito (com status Aberta/Fechada/Paga e barra de limite disponível), cards de saldo acumulado por conta bancária e visão consolidada de Patrimônio Total (Contas + Caixinhas) com Resumo Anual.',
+    category: 'feature',
+    version: '2.3.0',
+    published_at: '2026-11-02T19:55:00Z',
+    is_published: true
+  },
+  {
+    id: 'seed-upd-transfer-paid-pending-bulk',
+    title: 'Transferência entre Contas, Status Pago/Pendente e Ações em Lote no Extrato',
+    description: 'Nova aba Transferir para movimentar saldo entre contas sem inflar receitas/despesas, marcação rápida de lançamentos Pagos vs. Pendentes em 1 clique, botão Duplicar lançamento e modo Selecionar com ações em lote no Extrato.',
+    category: 'feature',
+    version: '2.3.0',
+    published_at: '2026-11-02T19:50:00Z',
+    is_published: true
+  },
+  {
+    id: 'seed-upd-credit-totals-installments-recurring',
+    title: 'Contabilização de Cartão de Crédito, Gestão de Parcelas e Recorrências Automáticas',
+    description: 'Compras no cartão de crédito agora integram corretamente as Saídas do mês, Gastos por Categoria e Orçamentos. Adicionada opção de editar ou excluir todas as parcelas de uma compra de uma só vez, geração automática de recorrências ao abrir o app e seletor de mês visível no Planejamento.',
+    category: 'improvement',
+    version: '2.3.0',
+    published_at: '2026-11-02T19:45:00Z',
+    is_published: true
+  },
+  {
     id: 'seed-upd-privacy-responsive',
     title: 'Visualização Ampliada da Política de Privacidade e Menus 2x2 no Mobile',
     description: 'O modal de Privacidade, Termos de Uso e LGPD foi ampliado no computador para 960px com visualização espaçosa e confortável. No celular, os menus de abas foram reestruturados em um grid de 2 colunas totalmente visível e acessível, eliminando opções cortadas.',

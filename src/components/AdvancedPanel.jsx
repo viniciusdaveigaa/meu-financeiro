@@ -22,7 +22,10 @@ import {
   changeMonth,
   dateInMonth,
   formatAmountInput,
-  inputToAmount
+  formatMoney,
+  getSavedCardLimits,
+  inputToAmount,
+  saveCardLimitLocal
 } from '../utils/formatters'
 import { getCategoryLabel } from '../constants/categories'
 import {
@@ -54,6 +57,7 @@ export function AdvancedPanel({
   const [cardType, setCardType] = useState('credit')
   const [closingDay, setClosingDay] = useState('')
   const [dueDay, setDueDay] = useState('')
+  const [creditLimit, setCreditLimit] = useState('')
   const [logo, setLogo] = useState('')
   const [ready, setReady] = useState(true)
   const [addingAccount, setAddingAccount] = useState(false)
@@ -100,9 +104,11 @@ export function AdvancedPanel({
 
       setReady(true)
       const localLogos = getSavedAccountLogos(currentUserId)
+      const localLimits = getSavedCardLimits(currentUserId)
       const accountsWithLogos = (accountResult.data || []).map((acc) => ({
         ...acc,
-        logo: acc.logo || localLogos[acc.id] || resolveBankLogo('', acc.name, acc.kind).id
+        logo: acc.logo || localLogos[acc.id] || resolveBankLogo('', acc.name, acc.kind).id,
+        credit_limit: acc.credit_limit || localLimits[acc.id] || null
       }))
       setAccounts(accountsWithLogos)
       setRecurring(recurringResult.data || [])
@@ -137,8 +143,9 @@ export function AdvancedPanel({
           (!item.last_generated_month || item.last_generated_month < targetMonth)
       )
 
-      if (!due.length || generatingRef.current) return
+      if (!due.length || generatingRef.current || window.__generatingRecurringLock) return
       generatingRef.current = true
+      window.__generatingRecurringLock = true
       let generated = false
       let generationFailed = false
 
@@ -196,6 +203,7 @@ export function AdvancedPanel({
         }
       } finally {
         generatingRef.current = false
+        window.__generatingRecurringLock = false
       }
     }
 
@@ -229,6 +237,7 @@ export function AdvancedPanel({
     setAddingAccount(true)
     const currentUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id || 'default'
     const cleanName = name.trim()
+    const limitNumeric = kind === 'card' && cardType !== 'debit' ? inputToAmount(creditLimit) : null
 
     const payload = {
       name: cleanName,
@@ -236,6 +245,7 @@ export function AdvancedPanel({
       card_type: kind === 'card' ? (cardType || 'credit') : null,
       closing_day: kind === 'card' && cardType !== 'debit' && closingDay ? Math.min(31, Math.max(1, parseInt(closingDay, 10))) : null,
       due_day: kind === 'card' && cardType !== 'debit' && dueDay ? Math.min(31, Math.max(1, parseInt(dueDay, 10))) : null,
+      credit_limit: limitNumeric > 0 ? limitNumeric : null,
       user_id: currentUserId
     }
 
@@ -243,6 +253,14 @@ export function AdvancedPanel({
       .from('accounts')
       .insert({ ...payload, logo: logo || null })
       .select()
+
+    if (insertRes.error) {
+      const { credit_limit, ...withoutLimit } = payload
+      insertRes = await supabase
+        .from('accounts')
+        .insert({ ...withoutLimit, logo: logo || null })
+        .select()
+    }
 
     if (insertRes.error) {
       insertRes = await supabase
@@ -260,6 +278,7 @@ export function AdvancedPanel({
     const chosenLogo = logo || resolveBankLogo('', cleanName, kind).id
     if (created?.id) {
       saveAccountLogo(currentUserId, created.id, chosenLogo)
+      saveCardLimitLocal(currentUserId, created.id, limitNumeric > 0 ? limitNumeric : null)
     }
 
     setName('')
@@ -267,6 +286,7 @@ export function AdvancedPanel({
     setCardType('credit')
     setClosingDay('')
     setDueDay('')
+    setCreditLimit('')
     window.dispatchEvent(new Event('finance-data-changed'))
     window.dispatchEvent(new Event('account-logos-changed'))
     load()
@@ -304,6 +324,10 @@ export function AdvancedPanel({
 
     const closingVal = editingAccount.kind === 'card' && cardTypeVal !== 'debit' && editingAccount.closing_day ? Math.min(31, Math.max(1, parseInt(editingAccount.closing_day, 10))) : null
     const dueVal = editingAccount.kind === 'card' && cardTypeVal !== 'debit' && editingAccount.due_day ? Math.min(31, Math.max(1, parseInt(editingAccount.due_day, 10))) : null
+    const editLimitNumeric =
+      editingAccount.kind === 'card' && cardTypeVal !== 'debit'
+        ? inputToAmount(editingAccount.credit_limit_input ?? amountToInput(editingAccount.credit_limit))
+        : null
 
     let updateRes = await supabase
       .from('accounts')
@@ -313,9 +337,24 @@ export function AdvancedPanel({
         card_type: cardTypeVal,
         closing_day: closingVal,
         due_day: dueVal,
+        credit_limit: editLimitNumeric > 0 ? editLimitNumeric : null,
         logo: editingAccount.logo || null
       })
       .eq('id', editingAccount.id)
+
+    if (updateRes.error) {
+      updateRes = await supabase
+        .from('accounts')
+        .update({
+          name: cleanName,
+          kind: editingAccount.kind,
+          card_type: cardTypeVal,
+          closing_day: closingVal,
+          due_day: dueVal,
+          logo: editingAccount.logo || null
+        })
+        .eq('id', editingAccount.id)
+    }
 
     if (updateRes.error) {
       updateRes = await supabase
@@ -334,6 +373,7 @@ export function AdvancedPanel({
 
     const chosenLogo = editingAccount.logo || resolveBankLogo('', cleanName, editingAccount.kind).id
     saveAccountLogo(currentUserId, editingAccount.id, chosenLogo)
+    saveCardLimitLocal(currentUserId, editingAccount.id, editLimitNumeric > 0 ? editLimitNumeric : null)
 
     setEditingAccount(null)
     window.dispatchEvent(new Event('finance-data-changed'))
@@ -583,6 +623,19 @@ export function AdvancedPanel({
                               />
                               <span className="field-hint">Dia do pagamento da fatura (1 a 31)</span>
                             </label>
+                            <label className="account-form-field col-span-2">
+                              <span className="field-label">Limite Total do Cartão (R$) — Opcional</span>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="Ex: 5.000,00"
+                                title="Limite total do cartão de crédito"
+                                value={editingAccount.credit_limit_input ?? (editingAccount.credit_limit ? amountToInput(editingAccount.credit_limit) : '')}
+                                onChange={(e) => setEditingAccount({ ...editingAccount, credit_limit_input: e.target.value })}
+                                disabled={savingEdit}
+                              />
+                              <span className="field-hint">Usado para exibir a barra de limite disponível na Visão Geral</span>
+                            </label>
                           </div>
                           {(!editingAccount.closing_day || !editingAccount.due_day) && (
                             <div className="card-date-warning-hint">
@@ -652,6 +705,7 @@ export function AdvancedPanel({
                           {acc.card_type !== 'debit' && acc.closing_day && acc.due_day ? (
                             <small className="acc-dates-text">
                               Fecha dia {acc.closing_day} • Vence dia {acc.due_day}
+                              {Number(acc.credit_limit) > 0 ? ` • Limite: ${formatCurrency(acc.credit_limit)}` : ''}
                             </small>
                           ) : acc.card_type !== 'debit' ? (
                             <small
@@ -676,7 +730,12 @@ export function AdvancedPanel({
                     <button
                       type="button"
                       className="icon-btn"
-                      onClick={() => setEditingAccount({ ...acc })}
+                      onClick={() =>
+                        setEditingAccount({
+                          ...acc,
+                          credit_limit_input: acc.credit_limit ? amountToInput(acc.credit_limit) : ''
+                        })
+                      }
                       aria-label={`Editar ${acc.name}`}
                       title="Editar"
                     >
@@ -799,6 +858,19 @@ export function AdvancedPanel({
                         required
                       />
                       <span className="field-hint">Dia do pagamento da fatura (1 a 31)</span>
+                    </label>
+                    <label className="account-form-field col-span-2">
+                      <span className="field-label">Limite Total do Cartão (R$) — Opcional</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="Ex: 5.000,00"
+                        title="Limite total do cartão de crédito"
+                        value={creditLimit}
+                        onChange={(e) => setCreditLimit(e.target.value)}
+                        disabled={addingAccount}
+                      />
+                      <span className="field-hint">Usado para exibir a barra de limite disponível na Visão Geral</span>
                     </label>
                   </div>
                   {(!closingDay || !dueDay) && (

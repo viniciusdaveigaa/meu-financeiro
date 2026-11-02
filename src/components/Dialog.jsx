@@ -30,6 +30,8 @@ export function DialogProvider({ children }) {
       message,
       title: options.title || 'Confirmar ação',
       confirmLabel: options.confirmLabel || 'Confirmar',
+      secondaryLabel: options.secondaryLabel || null,
+      secondaryValue: options.secondaryValue ?? 'secondary',
       cancelLabel: options.cancelLabel || 'Cancelar',
       danger: options.danger !== false
     })
@@ -175,6 +177,15 @@ export function DialogProvider({ children }) {
                   onClick={() => finish(false)}
                 >
                   {dialog.cancelLabel || 'Cancelar'}
+                </button>
+              )}
+              {dialog.secondaryLabel && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => finish(dialog.secondaryValue)}
+                >
+                  {dialog.secondaryLabel}
                 </button>
               )}
               <button

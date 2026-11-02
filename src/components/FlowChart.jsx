@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDownRight, ArrowUpRight, MousePointerClick, RotateCcw } from 'lucide-react'
-import { changeMonth, compactNumber, getMonthKey, monthNames, monthShortNames, percentChange } from '../utils/formatters'
+import { changeMonth, compactNumber, getMonthKey, isNeutralEntry, monthNames, monthShortNames, percentChange } from '../utils/formatters'
 import { usePrivacy } from '../context/PrivacyContext'
 import { Money } from './ui'
 
@@ -76,7 +76,7 @@ export function FlowChart({ entries, month, onSelectMonth, onResetMonth }) {
     let running = 0
     return Array.from({ length: range }, (_, index) => {
       const key = changeMonth(month, index - (range - 1))
-      const items = entries.filter((item) => item.date?.startsWith(key) && item.affects_balance !== false)
+      const items = entries.filter((item) => item.date?.startsWith(key) && item.type !== 'marker' && !isNeutralEntry(item))
       const income = items.filter((item) => item.type === 'income').reduce((sum, item) => sum + Number(item.amount), 0)
       const expense = items.filter((item) => item.type === 'expense').reduce((sum, item) => sum + Number(item.amount), 0)
       running += income - expense

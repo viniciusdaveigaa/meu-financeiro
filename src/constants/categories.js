@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   Baby,
   Briefcase,
   Car,
@@ -45,6 +46,7 @@ export const iconCatalog = {
   Sparkles: { label: 'Beleza / Cuidados', icon: Sparkles },
   CreditCard: { label: 'Finanças / Contas', icon: CreditCard },
   Wallet: { label: 'Investimentos', icon: Wallet },
+  ArrowLeftRight: { label: 'Transferência', icon: ArrowLeftRight },
   Tag: { label: 'Outros / Diversos', icon: Tag },
 }
 
@@ -78,6 +80,7 @@ export const defaultCategories = [
 export const defaultCategoryMeta = {
   Salario: { label: 'Salário', icon: Briefcase, color: '#15803d', bg: '#e3f4e8', iconName: 'Briefcase' },
   Caixinha: { label: 'Caixinha', icon: PiggyBank, color: '#0f766e', bg: '#dcf2ee', iconName: 'PiggyBank' },
+  Transferencia: { label: 'Transferência', icon: ArrowLeftRight, color: '#2563eb', bg: '#dbeafe', iconName: 'ArrowLeftRight' },
   Moradia: { label: 'Moradia', icon: House, color: '#1d4ed8', bg: '#e3ebfb', iconName: 'House' },
   Alimentacao: { label: 'Alimentação', icon: UtensilsCrossed, color: '#c2410c', bg: '#fcebdf', iconName: 'UtensilsCrossed' },
   Transporte: { label: 'Transporte', icon: Car, color: '#a16207', bg: '#f8efd6', iconName: 'Car' },
