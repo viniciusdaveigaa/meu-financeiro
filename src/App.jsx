@@ -1109,13 +1109,9 @@ function MainDashboard({ session, onSignOut }) {
                   entries={entries}
                   allEntries={allEntries}
                   onFilterAccount={handleFilterByAccount}
-                  onOpenPlanningAccounts={() => {
+                  onNavigatePlanning={(subTab) => {
                     setActiveTab('planning')
-                    setPlanningSubTab('accounts')
-                  }}
-                  onOpenSavings={() => {
-                    setActiveTab('planning')
-                    setPlanningSubTab('savings')
+                    setPlanningSubTab(subTab || 'accounts')
                   }}
                   onNewTransfer={() => setModal({ type: 'transfer' })}
                 />

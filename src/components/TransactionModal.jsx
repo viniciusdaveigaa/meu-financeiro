@@ -266,7 +266,11 @@ export function TransactionModal({
           <div className="tx-modal-layout">
             {/* Coluna Esquerda: Tipo, Valor, Descrição, Data, Conta */}
             <div className="tx-col-main">
-              <div className="type-switch" role="radiogroup" aria-label="Tipo">
+              <div
+                className={`type-switch ${!editing && accounts?.length >= 2 ? 'three-tabs' : ''}`}
+                role="radiogroup"
+                aria-label="Tipo"
+              >
                 <button
                   type="button"
                   role="radio"
