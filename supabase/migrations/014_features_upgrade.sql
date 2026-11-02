@@ -14,3 +14,10 @@ alter table public.transactions
 -- 3. Índices auxiliares para busca rápida
 create index if not exists transactions_is_paid_idx on public.transactions(user_id, is_paid);
 create index if not exists transactions_transfer_group_idx on public.transactions(transfer_group_id);
+
+-- 4. Normaliza compras de cartão de crédito existentes para contabilizar no balanço do mês
+update public.transactions
+set affects_balance = true
+where payment_method = 'credit'
+  and type = 'expense'
+  and affects_balance = false;
